@@ -57,7 +57,7 @@ def _parse_ui_object(sheet, row_index):
         cell_value(UI_OBJECT_INNER_TEXT),
         cell_value(UI_OBJECT_FRAME),
         cell_value(UI_OBJECT_NAME),
-        object_name,
+        object_name.lower(),
         cell_value(UI_OBJECT_PAGE_NAME),
         cell_value(UI_OBJECT_RECOVERY_SCENARIO),
         cell_value(UI_OBJECT_TAG_NAME),
@@ -65,6 +65,13 @@ def _parse_ui_object(sheet, row_index):
         cell_value(UI_OBJECT_TYPE),
         cell_value(UI_OBJECT_XPATH)
     )
+
+
+def _parse_ui_object_sheet(sheet):
+    return tuple(ui_object
+                 for ui_object in (_parse_ui_object(sheet, row_index)
+                                   for row_index in range(2, sheet.max_row + 1))
+                 if ui_object is not None)
 
 
 def parse_ui_objects(filename):
@@ -76,15 +83,10 @@ def parse_ui_objects(filename):
     """
     try:
         workbook = openpyxl.load_workbook(filename)
-        try:
-            sheet = workbook[workbook.sheetnames[0]]
-        except KeyError:
-            print("No sheet found in file {0}".format(filename), file=sys.stderr)
-            return None
         return {ui_object.object_name: ui_object
-                for ui_object in (_parse_ui_object(sheet, row_index)
-                                  for row_index in range(2, sheet.max_row + 1))
-                if ui_object is not None}
+                for sheet in workbook.worksheets
+                for ui_object in _parse_ui_object_sheet(sheet)
+                }
     except Exception as e:
         print(e, file=sys.stderr)
         return None
@@ -127,6 +129,7 @@ def _parse_action(sheet, row_index, ui_objects_map):
     if action is None or object_name is None:
         print('Incomplete action on row {0}'.format(row_index), file=sys.stderr)
         return None
+    object_name = object_name.lower()
     if object_name in ui_objects_map:
         return ActionAction(action, object_name)
     print('Object name {0} not found for action on row {1}'.format(object_name, row_index), file=sys.stderr)
@@ -145,6 +148,7 @@ def _parse_name_value_pairs(sheet, row_index, ui_objects_map):
         object_name = stripped_cell_value(sheet.cell(row_index, i))
         value = stripped_cell_value(sheet.cell(row_index, i + 1))
         if object_name is not None and value is not None:
+            object_name = object_name.lower()
             inputs.append((object_name, _process_boolean_value(value)))
             if object_name not in ui_objects_map:
                 print('Object name {0} not found on row {1}'.format(object_name, row_index), file=sys.stderr)
@@ -180,6 +184,7 @@ def _parse_object_exists(sheet, row_index, ui_objects_map):
     if object_name is None or value is None:
         print('Incomplete ObjectExists on row {0}'.format(row_index), file=sys.stderr)
         return None
+    object_name = object_name.lower()
     if object_name in ui_objects_map:
         return ObjectTestAction(object_name, _process_boolean_value(value))
     print('Object name {0} not found for ObjectExists on row {1}'.format(object_name, row_index), file=sys.stderr)
