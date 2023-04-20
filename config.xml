@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<config>
+	<database id="db1">
+		<name>MyDatabase1</name>
+		<server>localhost1</server>
+		<user>myuser1</user>
+		<password>mypassword1</password>
+	</database>
+	<database id="db2">
+		<name>MyDatabase2</name>
+		<server>localhost2</server>
+		<user>myuser2</user>
+		<password>mypassword2</password>
+	</database>
+	<email>
+		<server>smtp.gmail.com</server>
+		<port>587</port>
+		<user>myemail@gmail.com</user>
+		<password>mypassword</password>
+	</email>
+	<logging>
+		<level>debug</level>
+		<enabled>true</enabled>
+		<destination>file</destination>
+		<file_path>C:\logs\app.log</file_path>
+	</logging>
+</config>
