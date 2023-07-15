@@ -1,0 +1,72 @@
+
+
+The test clalss should have a few fields/fixtures
+
+1. A Web client capable of sending HTTP requests
+2. one or 2 fields storing the result of the last web service call (response as a string or 2 different fields for json or xml if the types are different)
+3. A Map to store the variable values
+4. A Map or similar data structure for configuration data like environment urls, api keys
+
+----------------------
+Given I am a XMLWebservice client
+Preparation method to do any initialization code if any.
+
+----------------------
+When I send a POST request to URL "[ZIPTERRITORY]/api/spectrum/ZipToCityState" with request header "TERRITORYCODEJSON" and the following json body
+"""
+{
+"Zip5":"17702",
+"MultiOutput":"N"
+}
+"""
+The method receive 3 parameters: url, request heder and JSON request body. It should use the webclient to make the request and store the response from the server in the 'jsonResponse field'
+The url and header will need some substitution logic based on the environment values. That logic should be extracted in its own static method
+
+----------------------
+When I send a POST request to URL "[CITYCODES]/api/spectrum/CityCodes" with request header "CITYCODES" and the following xml body
+"""
+<?xml version="1.0" encoding="utf-8"?>
+<ApiRequest xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+<AddressLine1>915 S Jackson St</AddressLine1>
+<City>Montgomery</City>
+<ZipCode5>36104</ZipCode5>
+<StateCode>AL</StateCode>
+<EffectiveDate>12/31/2000</EffectiveDate>
+</ApiRequest>
+"""
+The method receive 3 parameters: url, request heder and XML request body. It should use the webclient to make the request and store the response from the server in the 'XML Response field'
+The url and header will need some substitution logic based on the environment values. That logic should be extracted in its own static method
+
+----------------------
+I validate that the Response Code should be 200
+
+The method receive 1 parameter, the expected response code. It should assert that it is equal to the status of the last http response.
+
+----------------------
+And I validate that the json path expression "$[0].City" should be "WILLIAMSPORT"
+
+The method receives 2 parameters: a json path expression and a value
+The method should assert that the value extracted from the last response using the jsonpath expression is equal to the given value.
+The value will need special preprocessing before the assertion in order to substitute for functions and/or variable names and/or environment values. That substitution logic should be factored out in a static separate method because it is used in other places.
+
+----------------------
+And I validate that the xml path expression "/CityCodesResponse/CityCodesData/CityCodeData[child::ReturnCode = '00']" should be "<ReturnCode>00</ReturnCode><ZipCode>361045732</ZipCode><StateCode>AL</StateCode><CityGNIS>002404289</CityGNIS><CountyCode>101</CountyCode><CountyName>MONTGOMERY</CountyName><CensusMatchCode>S</CensusMatchCode><LatLongMatchCode>R</LatLongMatchCode><Confidence>100.0</Confidence><ConfidenceCity>Y</ConfidenceCity>"
+And I validate that the xml path expression "/CityCodesResponse/CityCodesData/CityCodeData/TaxDistrict[child::TaxDistrictId = '00000']" should be "<TaxDistrictId>00000</TaxDistrictId><TaxDistrictName>DEFAULT TAX DISTRICT</TaxDistrictName>"
+And I validate that the xml path expression "/CityCodesResponse/CityCodesData/CityCodeData/MoaMessages[child::string[1] = 'STREET ADDRESS MATCH.']" should be "<string>STREET ADDRESS MATCH.</string><string>ROOFTOP BASED ON STREET ADDRESS.</string><string>ZIP IS WHOLLY CONTAINED WITHIN CITY.</string>"
+
+Same thing as above but for XML.
+The method receives 2 parameters: a XPATH expression and a value
+The method should assert that the value extracted from the last response using the XPATH expression is equal to the given value.
+The value will need the same special preprocessing before the assertion than in the json case.
+
+----------------------
+I store the value of the json path expression "$[0].City" in variable "myVariable"
+
+The method receives 2 parameters: a json path expression and a variable name
+The method should evaluate the json path expression on the latest web service response and store the result in the variable map under the given name
+
+----------------------
+I store the value of the xml path expression "/CityCodesResponse/CityCodesData/CityCodeData[child::ReturnCode]" in variable "myVariable"
+
+The method receives 2 parameters: a XPATH expression and a variable name
+The method should evaluate the XPATH expression on the latest web service response and store the result in the variable map under the given name

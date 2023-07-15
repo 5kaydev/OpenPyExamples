@@ -1,0 +1,24 @@
+---
+title: Generator Model
+---
+classDiagram
+    ScenarioSource
+    ScenarioSource <|-- APITest
+    ScenarioSource <|-- CreateKeywordScenario
+    ScenarioSource <|-- DatabaseTest
+    ScenarioSource <|-- UITest
+    APITest "1" *-- "1..*" APIScenario
+    UITest "1" *-- "1..*" Action
+%%    Action <|-- ActionAction
+%%    Action <|-- CloseAllBrowsersAction
+%%    Action <|-- CreateKeywordAction
+%%    Action <|-- DataEntryAction
+%%    Action <|-- GetObjectDataAction
+%%    Action <|-- LaunchAUTAction
+%%    Action <|-- ObjectEnabledAction
+%%    Action <|-- ObjectHiddenAction
+%%    Action <|-- ObjectTestAction
+%%    Action <|-- TakeScreenShotAction
+%%    Action <|-- ValidationAction
+%%    Action <|-- WaitAction
+

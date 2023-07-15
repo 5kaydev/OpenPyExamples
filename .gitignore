@@ -1,6 +1,11 @@
 **/.DS_Store
-__pycache__/**
+**/__pycache__/**
 .idea/**
+.tox/**
 .venv/**
+build/**
+dist/**
+**/*.egg-info
 *.iml
-
+.coverage
+test.mmd
