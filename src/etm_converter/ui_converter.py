@@ -70,7 +70,7 @@ def _locate_scenarios(sheet: TestDataSheet) -> list[tuple[int, int]]:
                     state = STATE_UI
             elif state == STATE_CREATE_KEYWORD:
                 # create keyword state: we check for one line scenarios and start ui
-                if testing_action == model.TAF_DATABASE_TEST or testing_action == model.TAF_WEB_SERVICE:
+                if testing_action == model.TAF_DATABASE_TEST or testing_action == model.TAF_SHARED_STEP or testing_action == model.TAF_WEB_SERVICE:
                     scenarios.append((start, row_index))
                     scenarios.append((row_index, row_index + 1))
                     start = None
@@ -81,7 +81,7 @@ def _locate_scenarios(sheet: TestDataSheet) -> list[tuple[int, int]]:
                     state = STATE_UI
             else:
                 # ui state: we check for one line scenarios and end ui
-                if testing_action == model.TAF_DATABASE_TEST or testing_action == model.TAF_WEB_SERVICE:
+                if testing_action == model.TAF_DATABASE_TEST or testing_action == model.TAF_SHARED_STEP or testing_action == model.TAF_WEB_SERVICE:
                     scenarios.append((start, row_index))
                     scenarios.append((row_index, row_index + 1))
                     start = None
