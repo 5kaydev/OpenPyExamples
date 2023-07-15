@@ -385,11 +385,17 @@ def parse_database_test(spread_sheet: SpreadSheet,
                               params[PARAM_DB_VALIDATION])
 
 
-def _parse_shared_step(spread_sheet: SpreadSheet,
-                       sheet: TestDataSheet,
-                       row_index: int) -> model.SharedStepTest:
-    keywords = sheet.name_value_pairs(row_index)
-    return model.SharedStepTest(keywords, row_index)
+def parse_shared_step(spread_sheet: SpreadSheet,
+                      sheet: TestDataSheet,
+                      row_index: int) -> model.SharedStepTest:
+    parameters = {name: value for name, value in sheet.name_value_pairs(row_index)}
+    project_name = parameters['ProjectName']
+    test_case_name = parameters['TestCaseName']
+    if not (project_name and test_case_name):
+        print(f'ERROR: Missing parameters for SharedStep on row {row_index + 1}',
+              file=sys.stderr)
+        return None
+    return model.SharedStepTest(project_name.lower(), test_case_name.lower(), row_index)
 
 
 def _parse_wait_scenario(spread_sheet: SpreadSheet,
@@ -401,7 +407,7 @@ def _parse_wait_scenario(spread_sheet: SpreadSheet,
 
 TEST_PARSERS = {model.TAF_CREATE_KEYWORD: _parse_create_keyword,
                 model.TAF_DATABASE_TEST: parse_database_test,
-                model.TAF_SHARED_STEP: _parse_shared_step,
+                model.TAF_SHARED_STEP: parse_shared_step,
                 model.TAF_WAIT: _parse_wait_scenario,
                 model.TAF_WEB_SERVICE: parse_api_test}
 

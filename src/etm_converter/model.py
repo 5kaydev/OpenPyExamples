@@ -207,13 +207,14 @@ class DatabaseTest(ScenarioSource):
 
 @dataclass(frozen=True)
 class SharedStepTest(ScenarioSource):
-    keywords: tuple[tuple[str, str]]
+    project_name: str
+    test_case_name: str
     row_index: int
 
     def api_scenarios(self, big_request: bool) -> tuple[str]:
-        pairs = [f'{name} = {value}' for name, value in self.keywords]
-        pairs_str = ', '.join(pairs)
-        return (f'# SharedStep on row {self.row_index + 1}: {pairs_str}',)
+        lines = ['Scenario: SharedStep', '',
+                 f'When I execute the {self.project_name}/{self.test_case_name} shared step']
+        return ('\n'.join(lines),)
 
 
 @dataclass(frozen=True)
@@ -221,7 +222,7 @@ class WaitScenario(ScenarioSource):
     time_in_seconds: int
 
     def api_scenarios(self, big_request: bool) -> tuple[str]:
-        lines = ['Scenario: WaitScenario', '', f'When I wait for {self.time_in_seconds} seconds']
+        lines = ['Scenario: Wait', '', f'When I wait for {self.time_in_seconds} seconds']
         return ('\n'.join(lines),)
 
 

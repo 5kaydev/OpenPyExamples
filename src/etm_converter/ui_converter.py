@@ -60,7 +60,7 @@ def _locate_scenarios(sheet: TestDataSheet) -> list[tuple[int, int]]:
         if testing_action and sheet.runnable(row_index):
             if state == STATE_START:
                 # start state: We check for one line scenarios and for start create keyword and start ui
-                if testing_action == model.TAF_DATABASE_TEST or testing_action == model.TAF_WEB_SERVICE:
+                if testing_action == model.TAF_DATABASE_TEST or testing_action == model.TAF_SHARED_STEP or testing_action == model.TAF_WEB_SERVICE:
                     scenarios.append((row_index, row_index + 1))
                 elif testing_action == model.TAF_CREATE_KEYWORD:
                     start = row_index
@@ -363,6 +363,8 @@ def _parse_scenario(spread_sheet: SpreadSheet,
     testing_action = sheet.action(row_range[0]).lower()
     if testing_action == model.TAF_DATABASE_TEST:
         return api_converter.parse_database_test(spread_sheet, sheet, row_range[0])
+    if testing_action == model.TAF_SHARED_STEP:
+        return api_converter.parse_shared_step(spread_sheet, sheet, row_range[0])
     if testing_action == model.TAF_WEB_SERVICE:
         return api_converter.parse_api_test(spread_sheet, sheet, row_range[0])
     if testing_action == model.TAF_CREATE_KEYWORD:
