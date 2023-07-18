@@ -4,8 +4,8 @@ from typing import Callable
 
 import etm_converter.model as model
 from etm_converter import api_converter
-from etm_converter.converter_common import THN_OBJECT_NAME_1, create_repository_sheet, create_test_data_sheet, \
-    parse_time, substitute_value, TestDataSheet, UIObject
+from etm_converter.converter_common import create_parsing_context, create_repository_sheet, \
+    parse_time, substitute_value, ParsingContext, TestDataSheet, UIObject
 from etm_converter.excel_utils import load_excel, SpreadSheet
 
 DEFAULT_WAIT_FOR_OBJECT_IN_SECONDS = 60
@@ -120,16 +120,14 @@ def _process_boolean_value(val: str) -> str:
     return lower if lower == 'true' or lower == 'false' else val
 
 
-def _parse_action(spread_sheet: SpreadSheet,
-                  sheet: TestDataSheet,
+def _parse_action(parsing_context: ParsingContext,
                   row_index: int,
                   ui_objects_map: dict[str, UIObject]) -> tuple[model.ActionAction] | None:
     return tuple(model.ActionAction(action, object_name, row_index)
-                 for object_name, action in _parse_name_value_pairs(sheet, row_index, ui_objects_map))
+                 for object_name, action in _parse_name_value_pairs(parsing_context.sheet, row_index, ui_objects_map))
 
 
-def _parse_close_all_browser(spread_sheet: SpreadSheet,
-                             sheet: TestDataSheet,
+def _parse_close_all_browser(parsing_context: ParsingContext,
                              row_index: int,
                              ui_objects_map: dict[str, UIObject]) -> model.CloseAllBrowsersAction:
     return model.CloseAllBrowsersAction()
@@ -148,35 +146,31 @@ def _parse_name_value_pairs(sheet: TestDataSheet,
     return () if object_error else tuple(inputs)
 
 
-def _parse_create_keyword(spread_sheet: SpreadSheet,
-                          sheet: TestDataSheet,
+def _parse_create_keyword(parsing_context: ParsingContext,
                           row_index: int,
                           ui_objects_map: dict[str, UIObject]) -> tuple[model.CreateKeywordAction] | None:
     return tuple(model.CreateKeywordAction(object_name, substitute_value(value), row_index)
-                 for object_name, value in sheet.name_value_pairs(row_index))
+                 for object_name, value in parsing_context.sheet.name_value_pairs(row_index))
 
 
-def _parse_data_entry(spread_sheet: SpreadSheet,
-                      sheet: TestDataSheet,
+def _parse_data_entry(parsing_context: ParsingContext,
                       row_index: int,
                       ui_objects_map: dict[str, UIObject]) -> tuple[model.DataEntryAction] | None:
     return tuple(model.DataEntryAction(object_name, substitute_value(value), row_index)
-                 for object_name, value in _parse_name_value_pairs(sheet, row_index, ui_objects_map))
+                 for object_name, value in _parse_name_value_pairs(parsing_context.sheet, row_index, ui_objects_map))
 
 
-def _parse_get_object_data(spread_sheet: SpreadSheet,
-                           sheet: TestDataSheet,
+def _parse_get_object_data(parsing_context: ParsingContext,
                            row_index: int,
                            ui_objects_map: dict[str, UIObject]) -> tuple[model.GetObjectDataAction] | None:
     return tuple(model.GetObjectDataAction(object_name, value, row_index)
-                 for object_name, value in _parse_name_value_pairs(sheet, row_index, ui_objects_map))
+                 for object_name, value in _parse_name_value_pairs(parsing_context.sheet, row_index, ui_objects_map))
 
 
-def _parse_launch_aut(spread_sheet: SpreadSheet,
-                      sheet: TestDataSheet,
+def _parse_launch_aut(parsing_context: ParsingContext,
                       row_index: int,
                       ui_objects_map: dict[str, UIObject]) -> model.LaunchAUTAction | None:
-    url = sheet.sheet.cell(row_index, sheet.header_map[THN_OBJECT_NAME_1] + 1)
+    url = parsing_context.sheet.object_value1(row_index)
     if url is None:
         print(f'ERROR: Missing url on LaunchAUT action on row {row_index + 1}', file=sys.stderr)
         return None
@@ -206,29 +200,25 @@ def _parse_object_flags(sheet: TestDataSheet,
     return None if error else tuple(actions)
 
 
-def _parse_object_enabled(spread_sheet: SpreadSheet,
-                          sheet: TestDataSheet,
+def _parse_object_enabled(parsing_context: ParsingContext,
                           row_index: int,
                           ui_objects_map: dict[str, UIObject]) -> tuple[model.ObjectTestAction] | None:
-    return _parse_object_flags(sheet, row_index, ui_objects_map, model.object_enabled_action_factory)
+    return _parse_object_flags(parsing_context.sheet, row_index, ui_objects_map, model.object_enabled_action_factory)
 
 
-def _parse_object_exists(spread_sheet: SpreadSheet,
-                         sheet: TestDataSheet,
+def _parse_object_exists(parsing_context: ParsingContext,
                          row_index: int,
                          ui_objects_map: dict[str, UIObject]) -> tuple[model.ObjectTestAction] | None:
-    return _parse_object_flags(sheet, row_index, ui_objects_map, model.object_exist_action_factory)
+    return _parse_object_flags(parsing_context.sheet, row_index, ui_objects_map, model.object_exist_action_factory)
 
 
-def _parse_object_hidden(spread_sheet: SpreadSheet,
-                         sheet: TestDataSheet,
+def _parse_object_hidden(parsing_context: ParsingContext,
                          row_index: int,
                          ui_objects_map: dict[str, UIObject]) -> tuple[model.ObjectTestAction] | None:
-    return _parse_object_flags(sheet, row_index, ui_objects_map, model.object_hidden_action_factory)
+    return _parse_object_flags(parsing_context.sheet, row_index, ui_objects_map, model.object_hidden_action_factory)
 
 
-def _parse_take_screenshot(spread_sheet: SpreadSheet,
-                           sheet: TestDataSheet,
+def _parse_take_screenshot(parsing_context: ParsingContext,
                            row_index: int,
                            ui_objects_map: dict[str, UIObject]) -> model.TakeScreenShotAction:
     return model.TakeScreenShotAction()
@@ -243,34 +233,31 @@ def _process_validation_value(value: str) -> str:
     return value
 
 
-def _parse_validation(spread_sheet: SpreadSheet,
-                      sheet: TestDataSheet,
+def _parse_validation(parsing_context: ParsingContext,
                       row_index: int,
                       ui_objects_map: dict[str, UIObject]) -> tuple[model.ValidationAction] | None:
     return tuple(
         model.ValidationAction(object_name, _process_validation_value(substitute_value(value)), row_index)
-        for object_name, value in _parse_name_value_pairs(sheet, row_index, ui_objects_map))
+        for object_name, value in _parse_name_value_pairs(parsing_context.sheet, row_index, ui_objects_map))
 
 
-def _parse_wait(spread_sheet: SpreadSheet,
-                sheet: TestDataSheet,
+def _parse_wait(parsing_context: ParsingContext,
                 row_index: int,
                 ui_objects_map: dict[str, UIObject]) -> model.WaitAction:
-    time = parse_time(sheet.object_value1(row_index))
+    time = parse_time(parsing_context.sheet.object_value1(row_index))
     return model.WaitAction(time)
 
 
-def _parse_wait_for_object(spread_sheet: SpreadSheet,
-                           sheet: TestDataSheet,
+def _parse_wait_for_object(parsing_context: ParsingContext,
                            row_index: int,
                            ui_objects_map: dict[str, UIObject]) -> model.WaitAction:
-    object_name = sheet.object_name1(row_index)
+    object_name = parsing_context.sheet.object_name1(row_index)
     if object_name is None:
         print(f'ERROR: Missing object name for wait for object action on row {row_index + 1}', file=sys.stderr)
         return None
     object_name = object_name.lower()
     if _validate_object(ui_objects_map, object_name, row_index):
-        state = sheet.object_value1(row_index)
+        state = parsing_context.sheet.object_value1(row_index)
         state = state if state else 'existence'
         return model.WaitAction(DEFAULT_WAIT_FOR_OBJECT_IN_SECONDS, object_name, state)
     return None
@@ -319,8 +306,7 @@ def _parse_scenario_create_keyword(spread_sheet: SpreadSheet,
         return None
 
 
-def _parse_scenario_ui(spread_sheet: SpreadSheet,
-                       sheet: TestDataSheet,
+def _parse_scenario_ui(parsing_context: ParsingContext,
                        row_range: tuple[int, int],
                        ui_objects_map: dict[str, UIObject]) -> model.UITest | None:
     """
@@ -333,10 +319,10 @@ def _parse_scenario_ui(spread_sheet: SpreadSheet,
     actions = []
     start, end = row_range
     for row_index in range(start, end):
-        if sheet.runnable(row_index):
-            testing_action = sheet.action(row_index)
+        if parsing_context.sheet.runnable(row_index):
+            testing_action = parsing_context.sheet.action(row_index)
             if testing_action is not None and testing_action.lower() in ACTION_PARSERS.keys():
-                new_actions = ACTION_PARSERS[testing_action.lower()](spread_sheet, sheet, row_index, ui_objects_map)
+                new_actions = ACTION_PARSERS[testing_action.lower()](parsing_context, row_index, ui_objects_map)
                 if new_actions is None:
                     return None
                 if isinstance(new_actions, tuple):
@@ -349,8 +335,7 @@ def _parse_scenario_ui(spread_sheet: SpreadSheet,
     return model.UITest(tuple(actions), ui_objects_map)
 
 
-def _parse_scenario(spread_sheet: SpreadSheet,
-                    sheet: TestDataSheet,
+def _parse_scenario(parsing_context: ParsingContext,
                     row_range: tuple[int, int],
                     ui_objects_map: dict[str, UIObject]) -> model.ScenarioSource | None:
     """
@@ -360,16 +345,16 @@ def _parse_scenario(spread_sheet: SpreadSheet,
     :param ui_objects_map: The ui_objects map.
     :return: A Scenario object if successful or else None
     """
-    testing_action = sheet.action(row_range[0]).lower()
+    testing_action = parsing_context.sheet.action(row_range[0]).lower()
     if testing_action == model.TAF_DATABASE_TEST:
-        return api_converter.parse_database_test(spread_sheet, sheet, row_range[0])
+        return api_converter.parse_database_test(parsing_context, row_range[0])
     if testing_action == model.TAF_SHARED_STEP:
-        return api_converter.parse_shared_step(spread_sheet, sheet, row_range[0])
+        return api_converter.parse_shared_step(parsing_context, row_range[0])
     if testing_action == model.TAF_WEB_SERVICE:
-        return api_converter.parse_api_test(spread_sheet, sheet, row_range[0])
+        return api_converter.parse_api_test(parsing_context, row_range[0])
     if testing_action == model.TAF_CREATE_KEYWORD:
-        return _parse_scenario_create_keyword(spread_sheet, sheet, row_range)
-    return _parse_scenario_ui(spread_sheet, sheet, row_range, ui_objects_map)
+        return _parse_scenario_create_keyword(parsing_context, row_range)
+    return _parse_scenario_ui(parsing_context, row_range, ui_objects_map)
 
 
 def parse_file(filename: str, ui_objects_map: dict[str, UIObject]) -> tuple[model.ScenarioSource | None] | None:
@@ -381,16 +366,9 @@ def parse_file(filename: str, ui_objects_map: dict[str, UIObject]) -> tuple[mode
     # :return: A tuple of Scenarios.
     """
     try:
-        print(f'Parsing UI Test file: {filename}', file=sys.stderr)
-        spread_sheet = load_excel(filename)
-        try:
-            test_data = spread_sheet.sheet('TestData')
-        except KeyError:
-            print(f'No sheet found in file {filename}', file=sys.stderr)
-            return None
-        sheet = create_test_data_sheet(test_data)
-        return tuple((_parse_scenario(spread_sheet, sheet, row_range, ui_objects_map)
-                      for row_range in _locate_scenarios(sheet)))
+        parsing_context = create_parsing_context(filename)
+        return tuple((_parse_scenario(parsing_context, row_range, ui_objects_map)
+                      for row_range in _locate_scenarios(parsing_context.sheet)))
     except Exception as e:
         print(e, file=sys.stderr)
         return None

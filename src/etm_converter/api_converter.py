@@ -3,8 +3,8 @@ import re
 import sys
 
 import etm_converter.model as model
-from etm_converter.converter_common import create_test_data_sheet, parse_time, substitute_value, TestDataSheet
-from etm_converter.excel_utils import load_excel, Sheet, SpreadSheet
+from etm_converter.converter_common import create_parsing_context, parse_time, substitute_value, ParsingContext
+from etm_converter.excel_utils import Sheet
 
 # parameters for parsing database test
 PARAM_DB_CONNECTION_STRING = 'DBConnectionString'
@@ -30,10 +30,9 @@ def _cell_value(cell: str, is_input: bool) -> str | None:
     return cell
 
 
-def _parse_create_keyword(spread_sheet: SpreadSheet,
-                          sheet: TestDataSheet,
+def _parse_create_keyword(parsing_context: ParsingContext,
                           row_index: int) -> model.CreateKeywordScenario | None:
-    keywords = sheet.name_value_pairs(row_index)
+    keywords = parsing_context.sheet.name_value_pairs(row_index)
     if len(keywords) > 0:
         processed_keywords = tuple((key, substitute_value(value))
                                    for key, value in keywords)
@@ -313,16 +312,36 @@ def _parse_request_type(request_sheet: Sheet) -> str:
     return request_sheet.cell(0, 0)
 
 
-def parse_api_test(spread_sheet: SpreadSheet,
-                   sheet: TestDataSheet,
+def _apply_common_sheet(parsing_context: ParsingContext,
+                        template: str,
+                        inputs: tuple[tuple[str, str]],
+                        outputs: dict[str, tuple[tuple[str, str]]],
+                        variables: dict[str, tuple[tuple[str, str]]]) -> None:
+    if parsing_context.common_sheet:
+        for i in range(0, len(inputs)):
+            input_name = inputs[i][0]
+            existing_outputs = outputs[input_name] if input_name in outputs else ()
+            existing_variables = variables[input_name] if input_name in variables else ()
+            common_outputs, common_variables = parsing_context.common_sheet.get_data(template, input_name)
+            new_outputs = []
+            new_outputs.extend(existing_outputs)
+            new_outputs.extend(common_outputs)
+            outputs[input_name] = tuple(new_outputs)
+            new_variables = []
+            new_variables.extend(existing_variables)
+            new_variables.extend(common_variables)
+            variables[input_name] = tuple(new_variables)
+
+
+def parse_api_test(parsing_context: ParsingContext,
                    row_index: int) -> model.APITest | None:
     name = f'{row_index:0>2}'
-    parameters = {name: value for name, value in sheet.name_value_pairs(row_index)}
+    parameters = {name: value for name, value in parsing_context.sheet.name_value_pairs(row_index)}
     try:
-        request_sheet = spread_sheet.sheet(parameters[model.PARAM_REQUEST_SHEET])
-        validation_sheet = spread_sheet.sheet(parameters[model.PARAM_VALIDATION_SHEET]) \
+        request_sheet = parsing_context.spread_sheet.sheet(parameters[model.PARAM_REQUEST_SHEET])
+        validation_sheet = parsing_context.spread_sheet.sheet(parameters[model.PARAM_VALIDATION_SHEET]) \
             if model.PARAM_VALIDATION_SHEET in parameters else None
-        get_sheet = spread_sheet.sheet(parameters[model.PARAM_GET_SHEET]) \
+        get_sheet = parsing_context.spread_sheet.sheet(parameters[model.PARAM_GET_SHEET]) \
             if model.PARAM_GET_SHEET in parameters else None
     except KeyError:
         print(f'ERROR: Get, Request or Validation sheet not found on row {row_index + 1}', file=sys.stderr)
@@ -334,8 +353,9 @@ def parse_api_test(spread_sheet: SpreadSheet,
             file=sys.stderr)
         return None
     inputs = INPUT_PARSERS[request_type](request_sheet)
-    outputs = _parse_output(validation_sheet) if validation_sheet else None
-    variables = _parse_output(get_sheet) if get_sheet else None
+    outputs = _parse_output(validation_sheet) if validation_sheet else {}
+    variables = _parse_output(get_sheet) if get_sheet else {}
+    _apply_common_sheet(parsing_context, parameters[model.PARAM_REQUEST_SHEET], inputs, outputs, variables)
     if inputs is None:
         return None
     if request_type == 'get':
@@ -370,10 +390,9 @@ def parse_api_test(spread_sheet: SpreadSheet,
     return model.APITest(tuple(scenarios))
 
 
-def parse_database_test(spread_sheet: SpreadSheet,
-                        sheet: TestDataSheet,
+def parse_database_test(parsing_context: ParsingContext,
                         row_index: int) -> model.DatabaseTest | None:
-    params = {name: value for name, value in sheet.name_value_pairs(row_index)}
+    params = {name: value for name, value in parsing_context.sheet.name_value_pairs(row_index)}
     for param_name in DB_PARAMETERS:
         param_value = params[param_name]
         print(f'DB param {param_name} = {param_value}')
@@ -385,10 +404,9 @@ def parse_database_test(spread_sheet: SpreadSheet,
                               params[PARAM_DB_VALIDATION])
 
 
-def parse_shared_step(spread_sheet: SpreadSheet,
-                      sheet: TestDataSheet,
+def parse_shared_step(parsing_context: ParsingContext,
                       row_index: int) -> model.SharedStepTest:
-    parameters = {name: value for name, value in sheet.name_value_pairs(row_index)}
+    parameters = {name: value for name, value in parsing_context.sheet.name_value_pairs(row_index)}
     project_name = parameters['ProjectName']
     test_case_name = parameters['TestCaseName']
     if not (project_name and test_case_name):
@@ -398,10 +416,9 @@ def parse_shared_step(spread_sheet: SpreadSheet,
     return model.SharedStepTest(project_name.lower(), test_case_name.lower(), row_index)
 
 
-def _parse_wait_scenario(spread_sheet: SpreadSheet,
-                         sheet: TestDataSheet,
+def _parse_wait_scenario(parsing_context: ParsingContext,
                          row_index: int) -> model.WaitScenario:
-    time = parse_time(sheet.object_value1(row_index))
+    time = parse_time(parsing_context.sheet.object_value1(row_index))
     return model.WaitScenario(time)
 
 
@@ -412,11 +429,11 @@ TEST_PARSERS = {model.TAF_CREATE_KEYWORD: _parse_create_keyword,
                 model.TAF_WEB_SERVICE: parse_api_test}
 
 
-def _parse_test(spread_sheet: SpreadSheet, sheet: TestDataSheet,
+def _parse_test(parsing_context: ParsingContext,
                 row_index: int) -> model.ScenarioSource | None:
-    testing_action = sheet.action(row_index)
-    if testing_action.lower() in TEST_PARSERS.keys():
-        return TEST_PARSERS[testing_action.lower()](spread_sheet, sheet, row_index)
+    testing_action = parsing_context.sheet.action(row_index).lower()
+    if testing_action in TEST_PARSERS.keys():
+        return TEST_PARSERS[testing_action](parsing_context, row_index)
     else:
         print(f'ERROR: Unrecognized testing action {testing_action} on row {row_index}', file=sys.stderr)
         return None
@@ -429,17 +446,10 @@ def parse_file(filename: str) -> tuple[model.ScenarioSource | None] | None:
     :return: A tuple of ScenarioSource or None in case of error
     """
     try:
-        print(f'Parsing API test file: {filename}', file=sys.stderr)
-        spread_sheet = load_excel(filename)
-        try:
-            test_data = spread_sheet.sheet('TestData')
-        except KeyError:
-            print(f'ERROR: No TestData sheet found in file {filename}', file=sys.stderr)
-            return None
-        sheet = create_test_data_sheet(test_data)
-        tests = tuple(_parse_test(spread_sheet, sheet, row_index)
-                      for row_index in range(1, sheet.rows())
-                      if sheet.action(row_index) and sheet.runnable(row_index))
+        parsing_context = create_parsing_context(filename)
+        tests = tuple(_parse_test(parsing_context, row_index)
+                      for row_index in range(1, parsing_context.sheet.rows())
+                      if parsing_context.sheet.action(row_index) and parsing_context.sheet.runnable(row_index))
         return None if None in tests else tests
     except Exception as e:
         print(f'ERROR: Exception while parsing API test file: {filename}', file=sys.stderr)

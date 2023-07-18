@@ -2,13 +2,19 @@ import re
 import sys
 from dataclasses import dataclass
 
-from etm_converter.excel_utils import Sheet
+from etm_converter.excel_utils import load_excel, Sheet, SpreadSheet
 
 DEFAULT_WAIT_IN_SECONDS = 2
 # regexp for substitution of values in api tests and create keyword actions
 STRING_REGEXP = re.compile(r'^~string\("(.*)"\)$', re.IGNORECASE)
 SUBSTRING1_REGEXP = re.compile(r'~csharp\(\s*"({[^{}]*})".substring\(\s*(\d+)\s*\)\)', re.IGNORECASE)
 SUBSTRING2_REGEXP = re.compile(r'~csharp\(\s*"({[^{}]*})".substring\(\s*(\d+)\s*,\s*(\d+)\s*\)\)', re.IGNORECASE)
+
+CO_MODE = 'mode'
+CO_TEMPLATE = 'template'
+CO_TYPE = 'type'
+
+COMMON_COLUMN_NAMES_SET = {CO_MODE, CO_TEMPLATE, CO_TYPE}
 
 THN_CONDITION = 'conditional/flag'
 THN_ENV = 'environment'
@@ -39,6 +45,50 @@ UIO_COLUMN_NAMES_SET = {UIO_BROWSER_TITLE, UIO_BROWSER_URL, UIO_CLASS_NAME,
                         UIO_DESCRIPTIVE_PROGRAMMING, UIO_FRAME, UIO_ID, UIO_INNER_TEXT,
                         UIO_NAME, UIO_OBJECT_NAME, UIO_RECOVERY_SCENARIO,
                         UIO_TAG_NAME, UIO_TIME_OUT, UIO_TYPE, UIO_XPATH}
+
+
+@dataclass(frozen=True)
+class CommonSheet:
+    header_map: dict[str, int]
+    sheet: Sheet
+
+    def get_data(self, template: str, scenario_name: str) -> tuple[tuple[tuple[str, str]], tuple[tuple[str, str]]]:
+        template = template.lower()
+        scenario_name = scenario_name.lower()
+        scenario_column = None
+        for column_index in range(0, self.sheet.columns):
+            header = self.sheet.cell(0, column_index)
+            if header and scenario_name == header.lower():
+                scenario_column = column_index
+                break
+        if scenario_column is None:
+            return ((), ())
+        outputs = []
+        variables = []
+        for row_index in range(1, self.sheet.rows):
+            current_template = self.sheet.cell(row_index, self.header_map[CO_TEMPLATE])
+            if current_template and template == current_template.lower():
+                expression = self.sheet.cell(row_index, self.header_map[CO_TYPE])
+                value = self.sheet.cell(row_index, scenario_column)
+                if expression and value is not None:
+                    new_pair = (expression, substitute_value(value))
+                    mode = self.sheet.cell(row_index, self.header_map[CO_MODE])
+                    if mode and 'get' == mode.lower():
+                        variables.append(new_pair)
+                    else:
+                        outputs.append(new_pair)
+        return (tuple(outputs), tuple(variables))
+
+
+def create_common_sheet(sheet: Sheet) -> CommonSheet:
+    header_map = {}
+    for i in range(0, sheet.columns):
+        cell_value = sheet.cell(0, i)
+        if cell_value is not None:
+            header = cell_value.lower()
+            if header in COMMON_COLUMN_NAMES_SET:
+                header_map[header] = i
+    return CommonSheet(header_map, sheet)
 
 
 @dataclass(frozen=True)
@@ -89,6 +139,30 @@ def create_test_data_sheet(sheet: Sheet) -> TestDataSheet:
             if header in TEST_COLUMN_NAMES_SET:
                 header_map[header] = i
     return TestDataSheet(header_map, sheet)
+
+
+@dataclass(frozen=True)
+class ParsingContext:
+    spread_sheet: SpreadSheet
+    common_sheet: CommonSheet
+    sheet: TestDataSheet
+
+
+def create_parsing_context(filename: str) -> ParsingContext | None:
+    print(f'Parsing UI Test file: {filename}', file=sys.stderr)
+    spread_sheet = load_excel(filename)
+    try:
+        test_data = spread_sheet.sheet('TestData')
+    except KeyError:
+        print(f'No TestData sheet found in file {filename}', file=sys.stderr)
+        return None
+    sheet = create_test_data_sheet(test_data)
+    try:
+        common = spread_sheet.sheet('CommonSheet')
+    except KeyError:
+        common = None
+    common_sheet = create_common_sheet(common) if common else None
+    return ParsingContext(spread_sheet, common_sheet, sheet)
 
 
 @dataclass(frozen=True)
