@@ -6,7 +6,7 @@ import etm_converter.model as model
 from etm_converter import api_converter
 from etm_converter.converter_common import create_parsing_context, create_repository_sheet, \
     parse_time, substitute_value, ParsingContext, TestDataSheet, UIObject
-from etm_converter.excel_utils import load_excel, SpreadSheet
+from etm_converter.excel_utils import load_excel
 
 DEFAULT_WAIT_FOR_OBJECT_IN_SECONDS = 60
 DEFAULT_DATA_REGEXP = re.compile(r"^~defaultdata\((.*)\)$", re.IGNORECASE)
@@ -282,8 +282,7 @@ ACTION_PARSERS = {model.TAF_ACTION: _parse_action,
                   model.TAF_WAIT_FOR_OBJECT: _parse_wait_for_object}
 
 
-def _parse_scenario_create_keyword(spread_sheet: SpreadSheet,
-                                   sheet: TestDataSheet,
+def _parse_scenario_create_keyword(parsing_context: ParsingContext,
                                    row_range: tuple[int, int]) -> model.CreateKeywordScenario | None:
     """
     :param spread_sheet: The SpreadSheet
@@ -295,8 +294,8 @@ def _parse_scenario_create_keyword(spread_sheet: SpreadSheet,
     keywords = []
     start, end = row_range
     for row_index in range(start, end):
-        if sheet.runnable(row_index):
-            keywords.extend(sheet.name_value_pairs(row_index))
+        if parsing_context.sheet.runnable(row_index):
+            keywords.extend(parsing_context.sheet.name_value_pairs(row_index))
     if len(keywords) > 0:
         processed_keywords = tuple((key, substitute_value(value))
                                    for key, value in keywords)
