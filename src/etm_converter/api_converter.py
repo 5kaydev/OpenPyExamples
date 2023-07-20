@@ -346,22 +346,36 @@ def _transform_scenarios(parsing_context: ParsingContext, scenarios: [model.APIS
         new_scenarios = []
         for scenario in scenarios:
             header_flag = False
+            request_flag = False
             url_flag = False
-            # Replacing request headers get with SAPIGET and POST with SAPIPOST
+            # Replacing request headers get with SAPIGET, post with SAPIPOST and, postcwb by SAPIPOSTCWB
             if scenario.request_header.lower() == 'get':
                 request_header = 'SAPIGET'
                 header_flag = True
             if scenario.request_header.lower() == 'post':
                 request_header = 'SAPIPOST'
                 header_flag = True
+            if scenario.request_header.lower() == 'postcwb':
+                request_header = 'SAPIPOSTCWB'
+                header_flag = True
+            # Replacing {{sessionId}} in request
+            if '{{sessionId}}' in scenario.request:
+                request = scenario.request.replace('{{sessionId}}', '{sessionId}')
+                request_flag = True
             # Default url app host to SAPIAUTO
             if '[' not in scenario.url:
                 url = '[SAPIAUTO]' + scenario.url
                 url_flag = True
-            if header_flag or url_flag:
+            if header_flag or request_flag or url_flag:
                 new_scenarios.append(
-                    model.APIScenario(scenario.name, scenario.outputs, scenario.request, request_header,
-                                      scenario.request_type, scenario.response_code, url, scenario.variables))
+                    model.APIScenario(scenario.name,
+                                      scenario.outputs,
+                                      request if request_flag else scenario.request,
+                                      request_header if header_flag else scenario.request_header,
+                                      scenario.request_type,
+                                      scenario.response_code,
+                                      url if url_flag else scenario.url,
+                                      scenario.variables))
             else:
                 new_scenarios.append(scenario)
         return new_scenarios
