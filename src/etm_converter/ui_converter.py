@@ -356,16 +356,16 @@ def _parse_scenario(parsing_context: ParsingContext,
     return _parse_scenario_ui(parsing_context, row_range, ui_objects_map)
 
 
-def parse_file(filename: str, ui_objects_map: dict[str, UIObject]) -> tuple[model.ScenarioSource | None] | None:
+def parse_file(filename: str, ui_objects_map: dict[str, UIObject], selector: str) -> tuple[model.ScenarioSource | None] | None:
     """
-    # Parses the given Excel file into a tuple of Scenarios.
-    #
-    # :param filename: The name of the file to parse
-    # :param ui_objects_map: The map of Object names to UIObject
-    # :return: A tuple of Scenarios.
+    Parses the given Excel file into a tuple of Scenarios.
+    :param filename: The name of the file to parse
+    :param ui_objects_map: The map of Object names to UIObject
+    :param selector: The optional selector
+    :return: A tuple of Scenarios.
     """
     try:
-        parsing_context = create_parsing_context(filename)
+        parsing_context = create_parsing_context(filename, selector)
         return tuple((_parse_scenario(parsing_context, row_range, ui_objects_map)
                       for row_range in _locate_scenarios(parsing_context.sheet)))
     except Exception as e:

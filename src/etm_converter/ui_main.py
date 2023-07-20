@@ -10,14 +10,16 @@ from etm_converter.ui_converter import parse_file, parse_ui_objects
 def ui_main():
     parser = argparse.ArgumentParser(prog='etcuimain',
                                      description='Generate Gherkin test scenarios from excel files',
-                                     usage='etcuimain input_dir output_dir ui_objects_filename')
+                                     usage='etcuimain input_dir output_dir ui_objects_filename selector')
     parser.add_argument('input_dir')
     parser.add_argument('output_dir')
     parser.add_argument('ui_objects_filename')
+    parser.add_argument('selector', nargs='?')
     args = parser.parse_args()
     input_path = args.input_dir
     output_path = args.output_dir
     ui_objects_filename = args.ui_objects_filename
+    selector = args.selector
     success_path = os.path.join(input_path, 'success')
     os.makedirs(output_path, exist_ok=True)
     os.makedirs(success_path, exist_ok=True)
@@ -31,7 +33,7 @@ def ui_main():
                 file_name = path.name[:-5]
                 # print(entry.name)
                 input_filename = os.path.join(input_path, path.name)
-                sources = parse_file(input_filename, ui_objects_map)
+                sources = parse_file(input_filename, ui_objects_map, selector)
                 #                print(sources)
                 if sources is None or None in sources:
                     print('An error happened while parsing {0}'.format(path.name), file=sys.stderr)

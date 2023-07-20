@@ -333,6 +333,41 @@ def _apply_common_sheet(parsing_context: ParsingContext,
             variables[input_name] = tuple(new_variables)
 
 
+def _transform_scenarios(parsing_context: ParsingContext, scenarios: [model.APIScenario]) -> [model.APIScenario]:
+    """
+    Transform the scenarios based on the selector
+    :param parsing_context: The parsing context
+    :param scenarios: The scenarios to transform
+    :return: The transformed scenarios.
+    In the case of SAPI, it replaces RequestHeaders and add a Default host key in urls.
+    """
+    selector = parsing_context.selector.lower() if parsing_context.selector else None
+    if 'sapi' == selector:
+        new_scenarios = []
+        for scenario in scenarios:
+            header_flag = False
+            url_flag = False
+            # Replacing request headers get with SAPIGET and POST with SAPIPOST
+            if scenario.request_header.lower() == 'get':
+                request_header = 'SAPIGET'
+                header_flag = True
+            if scenario.request_header.lower() == 'post':
+                request_header = 'SAPIPOST'
+                header_flag = True
+            # Default url app host to SAPIAUTO
+            if '[' not in scenario.url:
+                url = '[SAPIAUTO]' + scenario.url
+                url_flag = True
+            if header_flag or url_flag:
+                new_scenarios.append(
+                    model.APIScenario(scenario.name, scenario.outputs, scenario.request, request_header,
+                                      scenario.request_type, scenario.response_code, url, scenario.variables))
+            else:
+                new_scenarios.append(scenario)
+        return new_scenarios
+    return scenarios
+
+
 def parse_api_test(parsing_context: ParsingContext,
                    row_index: int) -> model.APITest | None:
     name = f'{row_index:0>2}'
@@ -387,7 +422,7 @@ def parse_api_test(parsing_context: ParsingContext,
         scenarios.append(
             model.APIScenario(sc_name, sc_outputs, request, request_header, INPUT_TYPES[request_type], sc_response_code,
                               sc_url, sc_variables))
-    return model.APITest(tuple(scenarios))
+    return model.APITest(tuple(_transform_scenarios(parsing_context, scenarios)))
 
 
 def parse_database_test(parsing_context: ParsingContext,
@@ -439,14 +474,15 @@ def _parse_test(parsing_context: ParsingContext,
         return None
 
 
-def parse_file(filename: str) -> tuple[model.ScenarioSource | None] | None:
+def parse_file(filename: str, selector: str) -> tuple[model.ScenarioSource | None] | None:
     """
     Parses the tests in the given workbook
     :param filename: The file name
+    :param selector: The optional selector
     :return: A tuple of ScenarioSource or None in case of error
     """
     try:
-        parsing_context = create_parsing_context(filename)
+        parsing_context = create_parsing_context(filename, selector)
         tests = tuple(_parse_test(parsing_context, row_index)
                       for row_index in range(1, parsing_context.sheet.rows())
                       if parsing_context.sheet.action(row_index) and parsing_context.sheet.runnable(row_index))

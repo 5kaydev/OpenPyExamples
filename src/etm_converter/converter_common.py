@@ -146,9 +146,10 @@ class ParsingContext:
     spread_sheet: SpreadSheet
     common_sheet: CommonSheet
     sheet: TestDataSheet
+    selector: str
 
 
-def create_parsing_context(filename: str) -> ParsingContext | None:
+def create_parsing_context(filename: str, selector: str) -> ParsingContext | None:
     print(f'Parsing UI Test file: {filename}', file=sys.stderr)
     spread_sheet = load_excel(filename)
     try:
@@ -162,7 +163,7 @@ def create_parsing_context(filename: str) -> ParsingContext | None:
     except KeyError:
         common = None
     common_sheet = create_common_sheet(common) if common else None
-    return ParsingContext(spread_sheet, common_sheet, sheet)
+    return ParsingContext(spread_sheet, common_sheet, sheet, selector)
 
 
 @dataclass(frozen=True)
