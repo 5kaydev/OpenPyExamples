@@ -262,6 +262,7 @@ def substitute_value(value: str | None) -> str | None:
     2. Check for substring functions given in csharp
     3. Add delimiter around remaining csharp
     4. Substitute the ~string("...") expressions
+    5. Substitute the value of ~email
     :param value: The value to process
     :return: The processed value.
     """
@@ -281,4 +282,6 @@ def substitute_value(value: str | None) -> str | None:
     match = STRING_REGEXP.search(value)
     if match:
         return match.group(1)
+    if '~email' == lower:
+        return 'bitbucket@geico.com'
     return value
