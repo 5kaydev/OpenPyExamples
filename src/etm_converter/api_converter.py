@@ -116,7 +116,14 @@ def _substitute_json_template(json_template: str, value: str) -> str:
     match = template_regexp.search(json_template)
     if match:
         return f'{match.group(1)}: {value},'
-    return json_template.replace('string', value.replace('"', '\\"'))
+    if 'string' in json_template:
+        return json_template.replace('string', value.replace('"', '\\"'))
+    if 'boolean' in json_template:
+        return json_template.replace('boolean', value)
+    last_number_index = json_template.rfind('number')
+    if last_number_index >= 0:
+        return json_template[:last_number_index] + value + json_template[last_number_index + len('number'):]
+    return json_template
 
 
 def _parse_json_input(request_sheet: Sheet) -> tuple[tuple[str, str]] | None:
