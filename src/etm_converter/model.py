@@ -13,7 +13,7 @@ PARAM_REQUEST_SHEET = 'RequestSheet'
 PARAM_URL = 'URL'
 PARAM_VALIDATION_SHEET = 'ValidationSheet'
 
-RESPONSE_BODY_REGEXP = re.compile(r'response\s*body')
+RESPONSE_BODY_REGEXP = re.compile(r'^\s*response\s*body\s*$')
 XPATH_SUBST_REGEX = re.compile(r"^(.*)\|\|(.*)$", re.IGNORECASE)
 
 TAF_ACTION = 'action'
