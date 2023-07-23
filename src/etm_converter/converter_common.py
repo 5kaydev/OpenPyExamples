@@ -6,6 +6,7 @@ from etm_converter.excel_utils import load_excel, Sheet, SpreadSheet
 
 DEFAULT_WAIT_IN_SECONDS = 2
 # regexp for substitution of values in api tests and create keyword actions
+GUID_REGEXP = re.compile(r'~csharp\(\s*"?\s*Guid.NewGuid\(\).ToString\(\)\s*"?\s*\)', re.IGNORECASE)
 STRING_REGEXP = re.compile(r'^~string\("(.*)"\)$', re.IGNORECASE)
 SUBSTRING1_REGEXP = re.compile(r'~csharp\(\s*"({[^{}]*})".substring\(\s*(\d+)\s*\)\)', re.IGNORECASE)
 SUBSTRING2_REGEXP = re.compile(r'~csharp\(\s*"({[^{}]*})".substring\(\s*(\d+)\s*,\s*(\d+)\s*\)\)', re.IGNORECASE)
@@ -259,8 +260,8 @@ def substitute_value(value: str | None) -> str | None:
     """
     Substitution of values for api tests and create keyword actions
     1. Add the ~concat[[....]] around values containing potential concatenation.
-    2. Check for substring functions given in csharp
-    3. Add delimiter around remaining csharp
+    2. Generate ~guid for csharp guid function
+    3. Check for substring functions given in csharp
     4. Substitute the ~string("...") expressions
     5. Substitute the value of ~email
     :param value: The value to process
@@ -271,6 +272,9 @@ def substitute_value(value: str | None) -> str | None:
     lower = value.lower()
     if 'text(now()' in lower:
         return f'~concat[[{value}]]'
+    match = GUID_REGEXP.search(value)
+    if match:
+        return '~guid'
     match = SUBSTRING1_REGEXP.search(value)
     if match:
         exp = f'~substring({match.group(1)},{match.group(2)})'
