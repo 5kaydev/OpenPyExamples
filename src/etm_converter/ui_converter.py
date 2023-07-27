@@ -9,12 +9,15 @@ from etm_converter.converter_common import create_parsing_context, create_reposi
 from etm_converter.excel_utils import load_excel
 
 DEFAULT_WAIT_FOR_OBJECT_IN_SECONDS = 60
-DEFAULT_DATA_REGEXP = re.compile(r"^~defaultdata\((.*)\)$", re.IGNORECASE)
-LAUNCH_URL_REGEXP = re.compile(r"^\[(.*)\]$")
+COMPARE_INT_REGEXP = re.compile(r'^(.*)=(.*)$')
+DEFAULT_DATA_REGEXP = re.compile(r'^~defaultdata\((.*)\)$', re.IGNORECASE)
+LAUNCH_URL_REGEXP = re.compile(r'^\[(.*)\]$')
 # states for the _locate_scenarios automaton
 STATE_START = 0
-STATE_CREATE_KEYWORD = 1
-STATE_UI = 2
+STATE_COMPARE_INT = 1
+STATE_CREATE_KEYWORD = 2
+STATE_UI = 3
+SINGLE_ROW_SCENARIO_ACTIONS = {model.TAF_DATABASE_TEST, model.TAF_SHARED_STEP, model.TAF_WEB_SERVICE}
 
 TEST_ASSERTIONS = (model.TAF_OBJECT_NOT_ENABLED, model.TAF_OBJECT_NOT_EXIST, model.TAF_OBJECT_NOT_HIDDEN,
                    model.TAF_OBJECT_ENABLED, model.TAF_OBJECT_EXIST, model.TAF_OBJECT_HIDDEN, model.TAF_VALIDATION)
@@ -60,32 +63,50 @@ def _locate_scenarios(sheet: TestDataSheet) -> list[tuple[int, int]]:
         if testing_action and sheet.runnable(row_index):
             if state == STATE_START:
                 # start state: We check for one line scenarios and for start create keyword and start ui
-                if testing_action == model.TAF_DATABASE_TEST or testing_action == model.TAF_SHARED_STEP or testing_action == model.TAF_WEB_SERVICE:
+                if testing_action in SINGLE_ROW_SCENARIO_ACTIONS:
                     scenarios.append((row_index, row_index + 1))
+                elif testing_action == model.TAF_COMPARE_INT:
+                    start = row_index
+                    state = STATE_COMPARE_INT
                 elif testing_action == model.TAF_CREATE_KEYWORD:
                     start = row_index
                     state = STATE_CREATE_KEYWORD
                 else:
                     start = row_index
                     state = STATE_UI
-            elif state == STATE_CREATE_KEYWORD:
-                # create keyword state: we check for one line scenarios and start ui
-                if testing_action == model.TAF_DATABASE_TEST or testing_action == model.TAF_SHARED_STEP or testing_action == model.TAF_WEB_SERVICE:
+            elif state == STATE_COMPARE_INT:
+                # compare int state: we check for one line scenarios and start ui
+                if testing_action in SINGLE_ROW_SCENARIO_ACTIONS:
                     scenarios.append((start, row_index))
                     scenarios.append((row_index, row_index + 1))
                     start = None
                     state = STATE_START
-                elif testing_action != model.CreateKeywordAction:
+                elif testing_action != model.TAF_COMPARE_INT:
                     scenarios.append((start, row_index))
                     start = row_index
-                    state = STATE_UI
-            else:
-                # ui state: we check for one line scenarios and end ui
-                if testing_action == model.TAF_DATABASE_TEST or testing_action == model.TAF_SHARED_STEP or testing_action == model.TAF_WEB_SERVICE:
+                    state = STATE_CREATE_KEYWORD if testing_action == model.TAF_CREATE_KEYWORD else STATE_UI
+            elif state == STATE_CREATE_KEYWORD:
+                # create keyword state: we check for one line scenarios and start ui
+                if testing_action in SINGLE_ROW_SCENARIO_ACTIONS:
                     scenarios.append((start, row_index))
                     scenarios.append((row_index, row_index + 1))
                     start = None
                     state = STATE_START
+                elif testing_action != model.TAF_CREATE_KEYWORD:
+                    scenarios.append((start, row_index))
+                    start = row_index
+                    state = STATE_COMPARE_INT if testing_action == model.TAF_CREATE_KEYWORD else STATE_UI
+            else:
+                # ui state: we check for one line scenarios and end ui
+                if testing_action in SINGLE_ROW_SCENARIO_ACTIONS:
+                    scenarios.append((start, row_index))
+                    scenarios.append((row_index, row_index + 1))
+                    start = None
+                    state = STATE_START
+                elif testing_action == model.TAF_COMPARE_INT:
+                    scenarios.append((start, row_index))
+                    start = row_index
+                    state = STATE_COMPARE_INT
                 elif testing_action == model.TAF_CLOSE_ALL:
                     scenarios.append((start, row_index + 1))
                     start = None
@@ -282,13 +303,39 @@ ACTION_PARSERS = {model.TAF_ACTION: _parse_action,
                   model.TAF_WAIT_FOR_OBJECT: _parse_wait_for_object}
 
 
+def _parse_scenario_compare_int(parsing_context: ParsingContext,
+                                row_range: tuple[int, int]) -> model.CompareIntScenario | None:
+    """
+    :param spread_sheet: The SpreadSheet
+    :param sheet: The test data sheet
+    :param row_range: The range of rows for the scenario to parse in the test data sheet
+    :return: A CompareIntScenario object if successful or else None
+    """
+
+    keywords = []
+    start, end = row_range
+    for row_index in range(start, end):
+        if parsing_context.sheet.runnable(row_index):
+            keywords.extend(parsing_context.sheet.name_value_pairs(row_index))
+    comparisons = []
+    for key, value in keywords:
+        match = COMPARE_INT_REGEXP.search(key)
+        if match:
+            comparisons.append((match.group(1).strip(), match.group(2).strip(), _process_boolean_value(value)))
+    if len(comparisons) > 0:
+        return model.CompareIntScenario(tuple(comparisons))
+    else:
+        print(f'ERROR: No data specified in CompareInt actions on rows {start} to {end}', file=sys.stderr)
+        return None
+
+
 def _parse_scenario_create_keyword(parsing_context: ParsingContext,
                                    row_range: tuple[int, int]) -> model.CreateKeywordScenario | None:
     """
     :param spread_sheet: The SpreadSheet
     :param sheet: The test data sheet
     :param row_range: The range of rows for the scenario to parse in the test data sheet
-    :return: A UITest object if successful or else None
+    :return: A CreateKeywordScenario object if successful or else None
     """
 
     keywords = []
@@ -351,12 +398,15 @@ def _parse_scenario(parsing_context: ParsingContext,
         return api_converter.parse_shared_step(parsing_context, row_range[0])
     if testing_action == model.TAF_WEB_SERVICE:
         return api_converter.parse_api_test(parsing_context, row_range[0])
+    if testing_action == model.TAF_COMPARE_INT:
+        return _parse_scenario_compare_int(parsing_context, row_range)
     if testing_action == model.TAF_CREATE_KEYWORD:
         return _parse_scenario_create_keyword(parsing_context, row_range)
     return _parse_scenario_ui(parsing_context, row_range, ui_objects_map)
 
 
-def parse_file(filename: str, ui_objects_map: dict[str, UIObject], selector: str) -> tuple[model.ScenarioSource | None] | None:
+def parse_file(filename: str, ui_objects_map: dict[str, UIObject], selector: str) -> tuple[
+                                                                                         model.ScenarioSource | None] | None:
     """
     Parses the given Excel file into a tuple of Scenarios.
     :param filename: The name of the file to parse

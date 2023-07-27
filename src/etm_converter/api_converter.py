@@ -349,7 +349,7 @@ def _transform_scenarios(parsing_context: ParsingContext, scenarios: [model.APIS
     In the case of SAPI, it replaces RequestHeaders and add a Default host key in urls.
     """
     selector = parsing_context.selector.lower() if parsing_context.selector else None
-    if 'sapi' == selector:
+    if selector and 'sapi' in selector:
         new_scenarios = []
         for scenario in scenarios:
             header_flag = False
@@ -369,9 +369,9 @@ def _transform_scenarios(parsing_context: ParsingContext, scenarios: [model.APIS
             if '{{sessionId}}' in scenario.request:
                 request = scenario.request.replace('{{sessionId}}', '{sessionId}')
                 request_flag = True
-            # Default url app host to SAPIAUTO
+            # Default url app host to the parsing context
             if '[' not in scenario.url:
-                url = '[SAPIAUTO]' + scenario.url
+                url = f'[{parsing_context.selector.upper()}]{scenario.url}'
                 url_flag = True
             if header_flag or request_flag or url_flag:
                 new_scenarios.append(

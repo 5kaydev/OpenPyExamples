@@ -18,6 +18,7 @@ XPATH_SUBST_REGEX = re.compile(r"^(.*)\|\|(.*)$", re.IGNORECASE)
 
 TAF_ACTION = 'action'
 TAF_CLOSE_ALL = 'closeallbrowsers'
+TAF_COMPARE_INT = 'compareint'
 TAF_CREATE_KEYWORD = 'createkeyword'
 TAF_DATABASE_TEST = 'databasetest'
 TAF_DATA_ENTRY = 'enterdata'
@@ -178,6 +179,19 @@ class APITest(ScenarioSource):
     def size(self) -> int:
         return sum(scenario.size()
                    for scenario in self.scenarios)
+
+
+@dataclass(frozen=True)
+class CompareIntScenario(ScenarioSource):
+    comparisons: tuple[tuple[str, str, str]]
+
+    def api_scenarios(self, big_request: bool) -> tuple[str]:
+        lines = ['Scenario: CompareIntScenario']
+        prefix = 'When'
+        for exp1, exp2, value in self.comparisons:
+            lines.append(f'{prefix} I compare {exp1} with {exp2} and expect result to be {value}')
+            prefix = 'And'
+        return ('\n'.join(lines),)
 
 
 @dataclass(frozen=True)
