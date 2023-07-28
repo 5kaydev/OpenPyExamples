@@ -123,7 +123,7 @@ class TestDataSheet:
     def runnable(self, row_index: int) -> bool:
         run_type = self.sheet.cell(row_index, self.header_map[THN_RUN_TYPE])
         runnable = run_type and run_type.strip().lower() == 'g'
-        envs = self.sheet.cell(row_index, self.header_map[THN_ENV])
+        envs = self.sheet.cell(row_index, self.header_map[THN_ENV]) if THN_ENV in self.header_map else None
         valid_env = envs is None or 'in1' in envs.lower()
         return runnable and valid_env
 
