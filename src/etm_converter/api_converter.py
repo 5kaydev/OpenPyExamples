@@ -126,6 +126,14 @@ def _substitute_json_template(json_template: str, value: str) -> str:
     return json_template
 
 
+def _cleanup_json_template(json_template: str) -> str:
+    if json_template and 'sessionId:' in json_template:
+        return json_template.replace('sessionId:', '"sessionId":')
+    if json_template and 'trackingKeys:' in json_template:
+        return json_template.replace('trackingKeys:', '"trackingKeys":')
+    return json_template
+
+
 def _parse_json_input(request_sheet: Sheet) -> tuple[tuple[str, str]] | None:
     """
     Parses a json request sheet
@@ -144,7 +152,7 @@ def _parse_json_input(request_sheet: Sheet) -> tuple[tuple[str, str]] | None:
             properties = []
             types = []
             for row_index in range(opening_row, closing_row + 1):
-                json_template = request_sheet.cell(row_index, 0)
+                json_template = _cleanup_json_template(request_sheet.cell(row_index, 0))
                 input_value = _cell_value(request_sheet.cell(row_index, column_index), True)
                 if json_template and input_value is not None:
                     current_type = _json_row_type(json_template)
