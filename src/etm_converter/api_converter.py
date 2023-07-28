@@ -409,8 +409,8 @@ def parse_api_test(parsing_context: ParsingContext,
             if model.PARAM_VALIDATION_SHEET in parameters else None
         get_sheet = parsing_context.spread_sheet.sheet(parameters[model.PARAM_GET_SHEET]) \
             if model.PARAM_GET_SHEET in parameters else None
-    except KeyError:
-        print(f'ERROR: Get, Request or Validation sheet not found on row {row_index + 1}', file=sys.stderr)
+    except KeyError as e:
+        print(f'ERROR: Get, Request or Validation sheet {e.args[0]} not found on row {row_index + 1}', file=sys.stderr)
         return None
     request_type = _parse_request_type(request_sheet)
     if request_type not in INPUT_PARSERS.keys():
