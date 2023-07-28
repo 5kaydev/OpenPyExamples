@@ -131,6 +131,8 @@ def _cleanup_json_template(json_template: str) -> str:
         return json_template.replace('sessionId:', '"sessionId":')
     if json_template and 'trackingKeys:' in json_template:
         return json_template.replace('trackingKeys:', '"trackingKeys":')
+    if json_template and '"minimum": string"' in json_template:
+        return json_template.replace('"minimum": string"', '"minimum": string')
     return json_template
 
 
