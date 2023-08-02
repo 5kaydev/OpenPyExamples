@@ -10,6 +10,9 @@ GUID_REGEXP = re.compile(r'~csharp\(\s*"?\s*Guid.NewGuid\(\).ToString\(\)\s*"?\s
 STRING_REGEXP = re.compile(r'^~string\("(.*)"\)$', re.IGNORECASE)
 SUBSTRING1_REGEXP = re.compile(r'~csharp\(\s*"({[^{}]*})".substring\(\s*(\d+)\s*\)\)', re.IGNORECASE)
 SUBSTRING2_REGEXP = re.compile(r'~csharp\(\s*"({[^{}]*})".substring\(\s*(\d+)\s*,\s*(\d+)\s*\)\)', re.IGNORECASE)
+TO_TITLE_CASE_REGEXP = re.compile(
+    r'~csharp\(\s*CultureInfo\.CurrentCulture\.TextInfo\.ToTitleCase\(\s*"(.*)"\s*\)\s*\)\s*$',
+    re.IGNORECASE)
 
 CO_MODE = 'mode'
 CO_TEMPLATE = 'template'
@@ -286,6 +289,9 @@ def substitute_value(value: str | None) -> str | None:
     match = STRING_REGEXP.search(value)
     if match:
         return match.group(1)
+    match = TO_TITLE_CASE_REGEXP.search(value)
+    if match:
+        return f'~toTitleCase({match.group(1)})'
     if '~email' == lower:
         return 'bitbucket@geico.com'
     return value
