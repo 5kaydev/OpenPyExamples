@@ -1,6 +1,7 @@
 import abc
 import re
 from dataclasses import dataclass
+from typing import Any
 
 from etm_converter.converter_common import UIObject
 
@@ -89,7 +90,7 @@ class APIScenario:
                            + f'" and the following {self.request_type} ' \
                            + (f'request "{self.name}"' if big_request else f'body\n"""\n{self.request}\n"""')
         lines = [f'{self._scenario_annotation()}Scenario: {self.name}',
-                 'Given I am a XMLWebservice client',
+                 '',
                  request_line]
         # Append validation of response status code
         if self.response_code is None:
@@ -186,7 +187,7 @@ class CompareIntScenario(ScenarioSource):
     comparisons: tuple[tuple[str, str, str]]
 
     def api_scenarios(self, big_request: bool) -> tuple[str]:
-        lines = ['Scenario: CompareIntScenario']
+        lines = ['Scenario: CompareIntScenario', '']
         prefix = 'When'
         for exp1, exp2, value in self.comparisons:
             lines.append(f'{prefix} I compare {exp1} with {exp2} and expect result to be {value}')
@@ -199,7 +200,7 @@ class CreateKeywordScenario(ScenarioSource):
     keywords: tuple[tuple[str, str]]
 
     def api_scenarios(self, big_request: bool) -> tuple[str]:
-        lines = ['Scenario: CreateKeywordScenario']
+        lines = ['Scenario: CreateKeywordScenario', '']
         prefix = 'When'
         for name, value in self.keywords:
             variable_name = '{' + name.replace('{', '').replace('}', '') + '}'
@@ -210,13 +211,29 @@ class CreateKeywordScenario(ScenarioSource):
 
 @dataclass(frozen=True)
 class DatabaseTest(ScenarioSource):
-    connection_string: str
+    connection: str
     location: str
     query: str
-    result_json: str
+    validation: Any
 
     def api_scenarios(self, big_request: bool) -> tuple[str]:
-        return ()
+        lines = ['Scenario: Database Test',
+                 '',
+                 f'When I connect to database {self.connection} at {self.location} and run the query {self.query}',
+                 'Then I get the following result']
+        max_lengths = {}
+        for row in self.validation:
+            for field, value in row.items():
+                max_lengths[field] = max(len(field), len(value), max_lengths.get(field, 0))
+        fields = max_lengths.keys()
+        headers = (field + ' ' * (max_lengths[field] - len(field))
+                   for field in fields)
+        lines.append('| ' + ' | '.join(headers) + ' |')
+        for row in self.validation:
+            values = (row[field] + ' ' * (max_lengths[field] - len(row[field]))
+                      for field in fields)
+            lines.append('| ' + ' | '.join(values) + ' |')
+        return ('\n'.join(lines),)
 
 
 @dataclass(frozen=True)

@@ -7,11 +7,12 @@ from etm_converter.converter_common import create_parsing_context, parse_time, s
 from etm_converter.excel_utils import Sheet
 
 # parameters for parsing database test
-PARAM_DB_CONNECTION_STRING = 'DBConnectionString'
-PARAM_DB_LOCATION = 'DBLocation'
-PARAM_DB_QUERY = 'DBQuery'
-PARAM_DB_VALIDATION = 'ValidationString'
-DB_PARAMETERS = [PARAM_DB_CONNECTION_STRING, PARAM_DB_QUERY, PARAM_DB_LOCATION, PARAM_DB_VALIDATION]
+PARAM_DB_CONNECTION_STRING = 'dbconnectionstring'
+PARAM_DB_LOCATION = 'dblocation'
+PARAM_DB_QUERY = 'dbquery'
+PARAM_TEST_DB_CONNECTION_STRING = 'testdbconnectionstring'
+PARAM_DB_VALIDATION = 'validationstring'
+DB_CONNECTION_REGEX = re.compile(r'\s*\[([^\[\]]*)\]\s*')
 
 """Constants for elements to parse in the Excel file"""
 DO_NOT_INCLUDE = 'DONOTINCLUDE'
@@ -458,16 +459,30 @@ def parse_api_test(parsing_context: ParsingContext,
 
 def parse_database_test(parsing_context: ParsingContext,
                         row_index: int) -> model.DatabaseTest | None:
-    params = {name: value for name, value in parsing_context.sheet.name_value_pairs(row_index)}
-    for param_name in DB_PARAMETERS:
-        param_value = params[param_name]
-        print(f'DB param {param_name} = {param_value}')
-        if not param_value:
-            print(f'ERROR: Missing {param_name} for database test on row {row_index + 1}',
-                  file=sys.stderr)
+    params = {name.lower(): value for name, value in parsing_context.sheet.name_value_pairs(row_index)}
+    connection = params[PARAM_DB_CONNECTION_STRING] \
+        if PARAM_DB_CONNECTION_STRING in params \
+        else params.get(PARAM_TEST_DB_CONNECTION_STRING, None)
+    if connection:
+        match = DB_CONNECTION_REGEX.search(connection)
+        if match:
+            connection = match.group(1)
+    location = params.get(PARAM_DB_LOCATION, None)
+    query = params.get(PARAM_DB_QUERY, None)
+    validation = params.get(PARAM_DB_VALIDATION, None)
+    if connection and location and query and validation:
+        query = query.replace('\r\n', ' ').replace('\n', ' ').replace('\r', ' ')
+        try:
+            values = json.loads(validation)
+        except Exception as e:
+            print(f'ERROR: Exception while parsing validation for database test on row {row_index + 1}', file=sys.stderr)
+            print(e, file=sys.stderr)
+            print(validation, file=sys.stderr)
             return None
-    return model.DatabaseTest(params[PARAM_DB_CONNECTION_STRING], params[PARAM_DB_LOCATION], params[PARAM_DB_QUERY],
-                              params[PARAM_DB_VALIDATION])
+        return model.DatabaseTest(connection, location, query, values)
+    else:
+        print(f'ERROR: Missing parameter for database test on row {row_index + 1}', file=sys.stderr)
+        return None
 
 
 def parse_shared_step(parsing_context: ParsingContext,

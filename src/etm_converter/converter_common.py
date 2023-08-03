@@ -11,7 +11,7 @@ STRING_REGEXP = re.compile(r'^~string\("(.*)"\)$', re.IGNORECASE)
 SUBSTRING1_REGEXP = re.compile(r'~csharp\(\s*"({[^{}]*})".substring\(\s*(\d+)\s*\)\)', re.IGNORECASE)
 SUBSTRING2_REGEXP = re.compile(r'~csharp\(\s*"({[^{}]*})".substring\(\s*(\d+)\s*,\s*(\d+)\s*\)\)', re.IGNORECASE)
 TO_TITLE_CASE_REGEXP = re.compile(
-    r'~csharp\(\s*CultureInfo\.CurrentCulture\.TextInfo\.ToTitleCase\(\s*"(.*)"\s*\)\s*\)\s*$',
+    r'~csharp\(\s*CultureInfo\.CurrentCulture\.TextInfo\.ToTitleCase\(\s*"({[^{}]*})"\s*\)\s*\)\s*$',
     re.IGNORECASE)
 
 CO_MODE = 'mode'
