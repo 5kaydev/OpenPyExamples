@@ -224,13 +224,18 @@ class DatabaseTest(ScenarioSource):
         max_lengths = {}
         for row in self.validation:
             for field, value in row.items():
-                max_lengths[field] = max(len(field), len(value), max_lengths.get(field, 0))
+                max_lengths[field] = max(len(field), len(value) if value else 4, max_lengths.get(field, 0))
         fields = max_lengths.keys()
         headers = (field + ' ' * (max_lengths[field] - len(field))
                    for field in fields)
         lines.append('| ' + ' | '.join(headers) + ' |')
+
+        def serialize(input: str, max_length: int) -> str:
+            serialized = 'null' if input is None else input
+            return serialized + ' ' * (max_length - len(serialized))
+
         for row in self.validation:
-            values = (row[field] + ' ' * (max_lengths[field] - len(row[field]))
+            values = (serialize(row[field], max_lengths[field])
                       for field in fields)
             lines.append('| ' + ' | '.join(values) + ' |')
         return ('\n'.join(lines),)
