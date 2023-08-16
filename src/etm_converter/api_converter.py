@@ -366,6 +366,7 @@ def _transform_scenarios(parsing_context: ParsingContext, scenarios: [model.APIS
             header_flag = False
             request_flag = False
             url_flag = False
+            var_flag = False
             # Replacing request headers get with SAPIGET, post with SAPIPOST and, postcwb by SAPIPOSTCWB
             if scenario.request_header.lower() == 'get':
                 request_header = 'SAPIGET'
@@ -384,7 +385,12 @@ def _transform_scenarios(parsing_context: ParsingContext, scenarios: [model.APIS
             if '[' not in scenario.url:
                 url = f'[{parsing_context.selector.upper()}]{scenario.url}'
                 url_flag = True
-            if header_flag or request_flag or url_flag:
+            # Replacing {{sessionId}} in variables
+            var_flag = ('{{sessionId}}' in variable for _, variable in scenario.variables)
+            if var_flag:
+                variables = tuple((expression, variable.replace('{{sessionId}}', '{sessionId}'))
+                                  for expression, variable in scenario.variables)
+            if header_flag or request_flag or url_flag or var_flag:
                 new_scenarios.append(
                     model.APIScenario(scenario.name,
                                       scenario.outputs,
@@ -393,7 +399,7 @@ def _transform_scenarios(parsing_context: ParsingContext, scenarios: [model.APIS
                                       scenario.request_type,
                                       scenario.response_code,
                                       url if url_flag else scenario.url,
-                                      scenario.variables))
+                                      variables if var_flag else scenario.variables))
             else:
                 new_scenarios.append(scenario)
         return new_scenarios
@@ -475,7 +481,8 @@ def parse_database_test(parsing_context: ParsingContext,
         try:
             values = json.loads(validation)
         except Exception as e:
-            print(f'ERROR: Exception while parsing validation for database test on row {row_index + 1}', file=sys.stderr)
+            print(f'ERROR: Exception while parsing validation for database test on row {row_index + 1}',
+                  file=sys.stderr)
             print(e, file=sys.stderr)
             print(validation, file=sys.stderr)
             return None
