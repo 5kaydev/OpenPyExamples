@@ -7,8 +7,7 @@ from etm_converter.excel_utils import load_excel, Sheet, SpreadSheet
 DEFAULT_WAIT_IN_SECONDS = 2
 # regexp for substitution of values in api tests and create keyword actions
 GUID_REGEXP = re.compile(r'~csharp\(\s*"?\s*Guid.NewGuid\(\).ToString\(\)\s*"?\s*\)', re.IGNORECASE)
-NOW_REGEXP = re.compile(r'~csharp\(\s*DateTime.(Now|Today)', re.IGNORECASE)
-NOW_FORMAT_REGEXP = re.compile(r'ToString\("([^"]*)"\)')
+NOW_REGEXP = re.compile(r'~csharp\(\s*DateTime.(Now|Today)(.*)ToString\("(.*)"\)\)', re.IGNORECASE)
 STRING_REGEXP = re.compile(r'^~string\("(.*)"\)$', re.IGNORECASE)
 SUBSTRING1_REGEXP = re.compile(r'~csharp\(\s*"({[^{}]*})".substring\(\s*(\d+)\s*\)\)', re.IGNORECASE)
 SUBSTRING2_REGEXP = re.compile(r'~csharp\(\s*"({[^{}]*})".substring\(\s*(\d+)\s*,\s*(\d+)\s*\)\)', re.IGNORECASE)
@@ -279,11 +278,13 @@ def substitute_value(value: str | None) -> str | None:
         return f'~concat[[{value}]]'
     match = NOW_REGEXP.search(value)
     if match:
-        return '~now' \
-            + _parse_now('AddYears', 'y', value) \
-            + _parse_now('AddMonths', 'm', value) \
-            + _parse_now('AddDays', 'd', value) \
-            + _parse_now_format(value)
+        adders = match.group(2)
+        now_expr = '~now' \
+                   + _parse_now('AddYears', 'y', adders) \
+                   + _parse_now('AddMonths', 'm', adders) \
+                   + _parse_now('AddDays', 'd', adders) \
+                   + '{' + match.group(3) + '}'
+        return re.sub(NOW_REGEXP, now_expr, value)
     match = GUID_REGEXP.search(value)
     if match:
         return '~guid'
@@ -316,11 +317,4 @@ def _parse_now(group: str, suffix: str, value: str) -> str:
             return ('+' if count > 0 else '') + str(count) + suffix
         except ValueError:
             return ''
-    return ''
-
-
-def _parse_now_format(value: str) -> str:
-    match = NOW_FORMAT_REGEXP.search(value)
-    if match:
-        return '{' + match.group(1) + '}'
     return ''
