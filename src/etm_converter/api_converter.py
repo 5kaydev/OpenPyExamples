@@ -117,6 +117,8 @@ def _substitute_json_template(json_template: str, value: str) -> str:
     match = template_regexp.search(json_template)
     if match:
         return f'{match.group(1)}: {value},'
+    if 'rawstring' in json_template:
+        return json_template.replace('rawstring', value)
     if 'string' in json_template:
         return json_template.replace('string', value.replace('"', '\\"'))
     if 'boolean' in json_template:
