@@ -363,6 +363,7 @@ def _transform_scenarios(parsing_context: ParsingContext, scenarios: [model.APIS
     """
     selector = parsing_context.selector.lower() if parsing_context.selector else None
     if selector and 'sapi' in selector:
+        variable_names = ('{partitionKey}', '{retentionKey}', '{sessionId}', '{versionId}')
         new_scenarios = []
         for scenario in scenarios:
             header_flag = False
@@ -379,19 +380,27 @@ def _transform_scenarios(parsing_context: ParsingContext, scenarios: [model.APIS
             if scenario.request_header.lower() == 'postcwb':
                 request_header = 'SAPIPOSTCWB'
                 header_flag = True
-            # Replacing {{sessionId}} in request
-            if '{{sessionId}}' in scenario.request:
-                request = scenario.request.replace('{{sessionId}}', '{sessionId}')
-                request_flag = True
+            # Replacing double braced variables in request
+            request = scenario.request
+            for variable_name in variable_names:
+                double_braced = '{' + variable_name + '}'
+                if double_braced in request:
+                    request = request.replace(double_braced, variable_name)
+                    request_flag = True
             # Default url app host to the parsing context
             if '[' not in scenario.url:
                 url = f'[{parsing_context.selector.upper()}]{scenario.url}'
                 url_flag = True
-            # Replacing {{sessionId}} in variables
-            var_flag = ('{{sessionId}}' in variable for _, variable in scenario.variables)
-            if var_flag:
-                variables = tuple((expression, variable.replace('{{sessionId}}', '{sessionId}'))
-                                  for expression, variable in scenario.variables)
+            # Replacing double braced variables in variables
+            variables = []
+            for expression, variable in scenario.variables:
+                var_tuple = None
+                for variable_name in variable_names:
+                    double_braced = '{' + variable_name + '}'
+                    if double_braced in variable:
+                        var_tuple = (expression, variable.replace(double_braced, variable_name))
+                        var_flag = True
+                variables.append((expression, variable) if var_tuple is None else var_tuple)
             if header_flag or request_flag or url_flag or var_flag:
                 new_scenarios.append(
                     model.APIScenario(scenario.name,
@@ -401,7 +410,7 @@ def _transform_scenarios(parsing_context: ParsingContext, scenarios: [model.APIS
                                       scenario.request_type,
                                       scenario.response_code,
                                       url if url_flag else scenario.url,
-                                      variables if var_flag else scenario.variables))
+                                      tuple(variables) if var_flag else scenario.variables))
             else:
                 new_scenarios.append(scenario)
         return new_scenarios
