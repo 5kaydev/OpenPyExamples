@@ -90,9 +90,9 @@ def load_excel(input_filename: str) -> SpreadSheet | None:
                 cells = [[_cell_value(work_sheet.cell(row_index, column_index))
                           for column_index in range(1, columns + 1)]
                          for row_index in range(1, rows + 1)]
-                sheets[sheet_name] = Sheet(cells, columns, sheet_name, rows)
+                sheets[sheet_name.strip()] = Sheet(cells, columns, sheet_name, rows)
             else:
-                sheets[sheet_name] = Sheet([], 0, sheet_name, 0)
+                sheets[sheet_name.strip()] = Sheet([], 0, sheet_name, 0)
         return SpreadSheet(sheets)
     except Exception as e:
         print(e, file=sys.stderr)
