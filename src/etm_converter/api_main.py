@@ -24,6 +24,7 @@ def api_main():
     paths.sort()
     for path in paths:
         input_filename = os.path.join(input_path, path.name)
+        print(f'Parsing file {input_filename}')
         sources = parse_file(input_filename, selector)
         if sources is not None:
             file_name = path.name[:-5]

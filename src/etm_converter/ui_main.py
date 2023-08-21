@@ -33,6 +33,7 @@ def ui_main():
                 file_name = path.name[:-5]
                 # print(entry.name)
                 input_filename = os.path.join(input_path, path.name)
+                print(f'Parsing file {input_filename}')
                 sources = parse_file(input_filename, ui_objects_map, selector)
                 #                print(sources)
                 if sources is None or None in sources:
