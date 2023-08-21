@@ -479,17 +479,12 @@ def parse_api_test(parsing_context: ParsingContext,
 def parse_database_test(parsing_context: ParsingContext,
                         row_index: int) -> model.DatabaseTest | None:
     params = {name.lower(): value for name, value in parsing_context.sheet.name_value_pairs(row_index)}
-    connection = params[PARAM_DB_CONNECTION_STRING] \
-        if PARAM_DB_CONNECTION_STRING in params \
-        else params.get(PARAM_TEST_DB_CONNECTION_STRING, None)
-    if connection:
-        match = DB_CONNECTION_REGEX.search(connection)
-        if match:
-            connection = match.group(1)
-    location = params.get(PARAM_DB_LOCATION, None)
+    connection = parsing_context.selector \
+        if parsing_context.selector \
+        else parsing_context.sheet.object_name1()
     query = params.get(PARAM_DB_QUERY, None)
     validation = params.get(PARAM_DB_VALIDATION, None)
-    if connection and location and query and validation:
+    if connection and query and validation:
         query = query.replace('\r\n', ' ').replace('\n', ' ').replace('\r', ' ')
         try:
             values = json.loads(validation)
@@ -499,7 +494,7 @@ def parse_database_test(parsing_context: ParsingContext,
             print(e, file=sys.stderr)
             print(validation, file=sys.stderr)
             return None
-        return model.DatabaseTest(connection, location, query, values)
+        return model.DatabaseTest(connection, query, values)
     else:
         print(f'ERROR: Missing parameter for database test on row {row_index + 1}', file=sys.stderr)
         return None

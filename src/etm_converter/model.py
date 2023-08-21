@@ -212,14 +212,13 @@ class CreateKeywordScenario(ScenarioSource):
 @dataclass(frozen=True)
 class DatabaseTest(ScenarioSource):
     connection: str
-    location: str
     query: str
     validation: Any
 
     def api_scenarios(self, big_request: bool) -> tuple[str]:
         lines = ['Scenario: Database Test',
                  '',
-                 f'When I connect to database {self.connection} at {self.location} and run the query {self.query}',
+                 f'When I connect to database {self.connection} and run the query {self.query}',
                  'Then I get the following result']
         max_lengths = {}
         for row in self.validation:
