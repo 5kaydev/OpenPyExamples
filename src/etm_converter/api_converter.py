@@ -43,41 +43,50 @@ def _parse_create_keyword(parsing_context: ParsingContext,
         return None
 
 
-def _parse_get_input(request_sheet: Sheet) -> tuple[tuple[str, str]] | None:
+def _parse_get_input(parameters: dict[str, str], request_sheet: Sheet) -> tuple[tuple[str, str]] | None:
     """
     Parses a get request sheet
     :param request_sheet: The sheet to parse
     :return: a tuple of pairs (scenario name, url) or None in case of error
     """
-    url_row = None
-    for row_index in range(1, request_sheet.rows):
-        cell = request_sheet.cell(row_index, 0)
-        if cell and 'url' == cell.lower():
-            url_row = row_index
-            break
-    last_url = 0
-    while last_url < request_sheet.columns - 1 and \
-            request_sheet.cell(url_row, last_url + 1) and \
-            'url' == request_sheet.cell(url_row, last_url + 1).lower():
-        last_url = last_url + 1
-    inputs = []
-    invalid = False
-    for column_index in range(last_url + 1, request_sheet.columns):
-        scenario_name = request_sheet.cell(0, column_index)
-        if scenario_name:
-            url = request_sheet.cell(url_row, column_index)
-            if url:
-                inputs.append((scenario_name.lower(), url))
+    request_header = parameters[model.PARAM_REQUEST_HEADER]
+    url_param = parameters[model.PARAM_URL]
+    if request_header and 'get' == request_header.lower() and url_param:
+        inputs = []
+        for column_index in range(1, request_sheet.columns):
+            scenario_name = request_sheet.cell(0, column_index)
+            if scenario_name:
+                inputs.append((scenario_name.lower(), url_param))
+    else:
+        url_row = None
+        for row_index in range(1, request_sheet.rows):
+            cell = request_sheet.cell(row_index, 0)
+            if cell and 'url' == cell.lower():
+                url_row = row_index
+                break
+        last_url = 0
+        while last_url < request_sheet.columns - 1 and \
+                request_sheet.cell(url_row, last_url + 1) and \
+                'url' == request_sheet.cell(url_row, last_url + 1).lower():
+            last_url = last_url + 1
+        inputs = []
+        invalid = False
+        for column_index in range(last_url + 1, request_sheet.columns):
+            scenario_name = request_sheet.cell(0, column_index)
+            if scenario_name:
+                url = request_sheet.cell(url_row, column_index)
+                if url:
+                    inputs.append((scenario_name.lower(), url))
+                else:
+                    print(f'ERROR: URL found in url request sheet {request_sheet.name} on column {column_index}',
+                          file=sys.stderr)
+                    invalid = True
             else:
-                print(f'ERROR: URL found in url request sheet {request_sheet.name} on column {column_index}',
-                      file=sys.stderr)
-                invalid = True
-        else:
-            print(
-                f'WARNING: Missing scenario name in url request in sheet {request_sheet.name} on column {column_index}',
-                file=sys.stderr)
-    if invalid:
-        return None
+                print(
+                    f'WARNING: Missing scenario name in url request in sheet {request_sheet.name} on column {column_index}',
+                    file=sys.stderr)
+        if invalid:
+            return None
     if len(inputs) == 0:
         print(f'ERROR: No scenario found in sheet {request_sheet.name}', file=sys.stderr)
         return None
@@ -141,7 +150,7 @@ def _cleanup_json_template(json_template: str) -> str:
     return json_template
 
 
-def _parse_json_input(request_sheet: Sheet) -> tuple[tuple[str, str]] | None:
+def _parse_json_input(parameters: dict[str, str], request_sheet: Sheet) -> tuple[tuple[str, str]] | None:
     """
     Parses a json request sheet
     :param request_sheet: The sheet to parse
@@ -229,7 +238,7 @@ def _parse_xml_element(request_sheet: Sheet, row_index: int, column_index: int) 
     return start_tag + substitute_value(input_value) + end_tag
 
 
-def _parse_xml_input(request_sheet: Sheet) -> tuple[tuple[str, str]] | None:
+def _parse_xml_input(parameters: dict[str, str], request_sheet: Sheet) -> tuple[tuple[str, str]] | None:
     """
     Parses a xml request sheet
     :param request_sheet: The sheet to parse
@@ -326,11 +335,15 @@ def _parse_request_header(parameters: dict[str, str], row_index: int) -> str | N
         return header_parameter
 
 
-def _parse_request_type(request_sheet: Sheet) -> str:
+def _parse_request_type(parameters: dict[str, str], request_sheet: Sheet) -> str:
     for row_index in range(1, request_sheet.rows):
         cell = request_sheet.cell(row_index, 0)
         if cell and 'url' == cell.lower():
             return 'get'
+    request_header = parameters[model.PARAM_REQUEST_HEADER]
+    url = parameters[model.PARAM_URL]
+    if request_header and 'get' == request_header.lower() and url:
+        return 'get'
     return request_sheet.cell(0, 0)
 
 
@@ -432,13 +445,13 @@ def parse_api_test(parsing_context: ParsingContext,
     except KeyError as e:
         print(f'ERROR: Get, Request or Validation sheet {e.args[0]} not found on row {row_index + 1}', file=sys.stderr)
         return None
-    request_type = _parse_request_type(request_sheet)
+    request_type = _parse_request_type(parameters, request_sheet)
     if request_type not in INPUT_PARSERS.keys():
         print(
             f'ERROR: Unknown request type found request sheet {parameters[model.PARAM_REQUEST_SHEET]}',
             file=sys.stderr)
         return None
-    inputs = INPUT_PARSERS[request_type](request_sheet)
+    inputs = INPUT_PARSERS[request_type](parameters, request_sheet)
     outputs = _parse_output(validation_sheet) if validation_sheet else {}
     variables = _parse_output(get_sheet) if get_sheet else {}
     _apply_common_sheet(parsing_context, parameters[model.PARAM_REQUEST_SHEET], inputs, outputs, variables)
