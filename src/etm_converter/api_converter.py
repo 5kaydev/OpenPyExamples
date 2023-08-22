@@ -139,6 +139,7 @@ def _substitute_json_template(json_template: str, value: str) -> str:
 
 
 def _cleanup_json_template(json_template: str) -> str:
+    json_template = json_template.replace('String', 'string').replace('\u00a0', ' ')
     if json_template and 'occurrenceDateRange:' in json_template:
         return json_template.replace('occurrenceDateRange:', '"occurrenceDateRange":')
     if json_template and 'salesGateway:' in json_template:
