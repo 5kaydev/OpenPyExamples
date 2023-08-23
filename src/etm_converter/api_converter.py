@@ -50,7 +50,7 @@ def _parse_get_input(parameters: dict[str, str], request_sheet: Sheet) -> tuple[
     :return: a tuple of pairs (scenario name, url) or None in case of error
     """
     request_header = parameters[model.PARAM_REQUEST_HEADER]
-    url_param = parameters[model.PARAM_URL]
+    url_param = parameters.get(model.PARAM_URL, None)
     if request_header and 'get' == request_header.lower() and url_param:
         inputs = []
         for column_index in range(1, request_sheet.columns):
@@ -346,7 +346,7 @@ def _parse_request_type(parameters: dict[str, str], request_sheet: Sheet) -> str
         if cell and 'url' == cell.lower():
             return 'get'
     request_header = parameters[model.PARAM_REQUEST_HEADER]
-    url = parameters[model.PARAM_URL]
+    url = parameters.get(model.PARAM_URL, None)
     if request_header and 'get' == request_header.lower() and url:
         return 'get'
     return request_sheet.cell(0, 0)
