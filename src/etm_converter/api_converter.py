@@ -139,19 +139,20 @@ def _substitute_json_template(json_template: str, value: str) -> str:
 
 
 def _cleanup_json_template(json_template: str) -> str:
-    json_template = json_template.replace('String', 'string').replace('\u00a0', ' ')
-    if json_template and 'occurrenceDateRange:' in json_template:
-        return json_template.replace('occurrenceDateRange:', '"occurrenceDateRange":')
-    if json_template and 'salesGateway:' in json_template:
-        return json_template.replace('salesGateway:', '"salesGateway":')
-    if json_template and 'sessionId:' in json_template:
-        return json_template.replace('sessionId:', '"sessionId":')
-    if json_template and 'trackingKeys:' in json_template:
-        return json_template.replace('trackingKeys:', '"trackingKeys":')
-    if json_template and '"minimum": string"' in json_template:
-        return json_template.replace('"minimum": string"', '"minimum": string')
-    if json_template and 'registrationInfo:' in json_template:
-        return json_template.replace('registrationInfo:', '"registrationInfo":')
+    if json_template:
+        json_template = json_template.replace('String', 'string').replace('\u00a0', ' ')
+        if 'occurrenceDateRange:' in json_template:
+            return json_template.replace('occurrenceDateRange:', '"occurrenceDateRange":')
+        if 'salesGateway:' in json_template:
+            return json_template.replace('salesGateway:', '"salesGateway":')
+        if 'sessionId:' in json_template:
+            return json_template.replace('sessionId:', '"sessionId":')
+        if 'trackingKeys:' in json_template:
+            return json_template.replace('trackingKeys:', '"trackingKeys":')
+        if '"minimum": string"' in json_template:
+            return json_template.replace('"minimum": string"', '"minimum": string')
+        if 'registrationInfo:' in json_template:
+            return json_template.replace('registrationInfo:', '"registrationInfo":')
     return json_template
 
 
