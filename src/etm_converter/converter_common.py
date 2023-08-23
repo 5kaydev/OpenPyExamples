@@ -8,6 +8,8 @@ DEFAULT_WAIT_IN_SECONDS = 2
 # regexp for substitution of values in api tests and create keyword actions
 GUID_REGEXP = re.compile(r'~csharp\(\s*"?\s*Guid.NewGuid\(\).ToString\(\)\s*"?\s*\)', re.IGNORECASE)
 NOW_REGEXP = re.compile(r'~csharp\(\s*DateTime.(Now|Today)(.*)ToString\("(.*)"\)\)', re.IGNORECASE)
+PHONE_REGEXP = re.compile(r'~csharp\(return string.Format\(.*201275.*new Random\(\).Next\(1000,9999\)\);\)',
+                          re.IGNORECASE)
 STRING_REGEXP = re.compile(r'^~string\("(.*)"\)$', re.IGNORECASE)
 SUBSTRING1_REGEXP = re.compile(r'~csharp\(\s*"({[^{}]*})".substring\(\s*(\d+)\s*\)\)', re.IGNORECASE)
 SUBSTRING2_REGEXP = re.compile(r'~csharp\(\s*"({[^{}]*})".substring\(\s*(\d+)\s*,\s*(\d+)\s*\)\)', re.IGNORECASE)
@@ -285,6 +287,10 @@ def substitute_value(value: str | None) -> str | None:
                    + _parse_now('AddDays', 'd', adders) \
                    + '{' + match.group(3) + '}'
         return re.sub(NOW_REGEXP, now_expr, value)
+    match = PHONE_REGEXP.search(value)
+    if match:
+        phone = '201275~random{1000}'
+        return re.sub(PHONE_REGEXP, phone, value)
     match = GUID_REGEXP.search(value)
     if match:
         return '~guid'
