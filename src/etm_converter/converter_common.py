@@ -8,7 +8,7 @@ DEFAULT_WAIT_IN_SECONDS = 2
 # regexp for substitution of values in api tests and create keyword actions
 GUID_REGEXP = re.compile(r'~csharp\(\s*"?\s*Guid.NewGuid\(\).ToString\(\)\s*"?\s*\)', re.IGNORECASE)
 NOW_REGEXP = re.compile(r'~csharp\(\s*DateTime.(Now|Today)(.*)ToString\("(.*)"\)\)', re.IGNORECASE)
-PHONE_REGEXP = re.compile(r'~csharp\(return string.Format\(.*201275.*new Random\(\).Next\(1000,9999\)\);\)',
+PHONE_REGEXP = re.compile(r'~csharp\(return string.Format\(.*201275.*new Random\(\).Next\(1000\s*,\s*9999\)\);\)',
                           re.IGNORECASE)
 STRING_REGEXP = re.compile(r'^~string\("(.*)"\)$', re.IGNORECASE)
 SUBSTRING1_REGEXP = re.compile(r'~csharp\(\s*"({[^{}]*})".substring\(\s*(\d+)\s*\)\)', re.IGNORECASE)
