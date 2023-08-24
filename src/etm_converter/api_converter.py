@@ -481,6 +481,7 @@ def parse_api_test(parsing_context: ParsingContext,
                 if RESPONSE_CODE_REGEXP.search(expression.lower()):
                     sc_response_code = value
                 else:
+                    expression = expression.replace('"', '\'') if request_type == 'Json' else expression
                     filtered_outputs.append((expression, value))
             sc_outputs = tuple(filtered_outputs)
         else:
