@@ -141,6 +141,8 @@ def _substitute_json_template(json_template: str, value: str) -> str:
 def _cleanup_json_template(json_template: str) -> str:
     if json_template:
         json_template = json_template.replace('String', 'string').replace('\u00a0', ' ')
+        if '"vin": ""' in json_template:
+            return json_template.replace('"vin": ""', '"vin": "string"')
         if 'occurrenceDateRange:' in json_template:
             return json_template.replace('occurrenceDateRange:', '"occurrenceDateRange":')
         if 'salesGateway:' in json_template:
