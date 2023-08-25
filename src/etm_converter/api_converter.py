@@ -20,6 +20,7 @@ TYPE_JSON_OPENING = 0
 TYPE_JSON_CLOSING = 1
 TYPE_JSON_FIELD = 2
 
+JSON_FIELD_REGEXP = re.compile(r'"([A-Z])([^"]*)":')
 RESPONSE_CODE_REGEXP = re.compile(r'response\s*code', re.IGNORECASE)
 
 
@@ -143,8 +144,10 @@ def _cleanup_json_template(json_template: str) -> str:
         json_template = json_template.replace('String', 'string').replace('\u00a0', ' ')
         if '"enabjled":' in json_template:
             return json_template.replace('"enabjled":', '"enabled":')
-        if '"Enabled":' in json_template:
-            return json_template.replace('"Enabled":', '"enabled":')
+        match = JSON_FIELD_REGEXP.search(json_template)
+        if match:
+            sub = f'"{match.group(1).lower()}{match.group(2)}":'
+            return re.sub(JSON_FIELD_REGEXP, sub, json_template)
         if '"vin": ""' in json_template:
             return json_template.replace('"vin": ""', '"vin": "string"')
         if 'occurrenceDateRange:' in json_template:
