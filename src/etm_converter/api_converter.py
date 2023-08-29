@@ -162,6 +162,8 @@ def _cleanup_json_template(json_template: str) -> str:
             return json_template.replace('"minimum": string"', '"minimum": string')
         if 'registrationInfo:' in json_template:
             return json_template.replace('registrationInfo:', '"registrationInfo":')
+        if '"unitNumber": ""' in json_template:
+            return json_template.replace('"unitNumber": ""', '"unitNumber": "string"')
     return json_template
 
 
