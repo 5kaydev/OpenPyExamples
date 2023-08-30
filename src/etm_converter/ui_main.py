@@ -8,9 +8,9 @@ from etm_converter.ui_converter import parse_file, parse_ui_objects
 
 
 def ui_main():
-    parser = argparse.ArgumentParser(prog='etcuimain',
+    parser = argparse.ArgumentParser(prog='etcui',
                                      description='Generate Gherkin test scenarios from excel files',
-                                     usage='etcuimain input_dir output_dir ui_objects_filename selector')
+                                     usage='etcui input_dir output_dir ui_objects_filename [selector]')
     parser.add_argument('input_dir')
     parser.add_argument('output_dir')
     parser.add_argument('ui_objects_filename')

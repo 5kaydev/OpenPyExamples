@@ -7,9 +7,9 @@ from etm_converter.generator import generate_feature
 
 
 def api_main():
-    parser = argparse.ArgumentParser(prog='etcmain',
+    parser = argparse.ArgumentParser(prog='etcapi',
                                      description='Generate Gherkin test scenarios from excel files',
-                                     usage='etcmain input_dir output_dir selector')
+                                     usage='etcapi input_dir output_dir [selector]')
     parser.add_argument('input_dir')
     parser.add_argument('output_dir')
     parser.add_argument('selector', nargs='?')
