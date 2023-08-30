@@ -514,7 +514,7 @@ def parse_database_test(parsing_context: ParsingContext,
         if parsing_context.selector \
         else parsing_context.sheet.object_name1()
     query = params.get(PARAM_DB_QUERY, None)
-    validation = params.get(PARAM_DB_VALIDATION, None)
+    validation = params.get(PARAM_DB_VALIDATION, 'MISSING Validation string')
     if connection and query and validation:
         query = query.replace('\r\n', ' ').replace('\n', ' ').replace('\r', ' ')
         try:
