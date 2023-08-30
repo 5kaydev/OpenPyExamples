@@ -157,7 +157,7 @@ class ParsingContext:
 
 
 def create_parsing_context(filename: str, selector: str) -> ParsingContext | None:
-    print(f'Parsing UI Test file: {filename}', file=sys.stderr)
+    print(f'Parsing Test file: {filename}', file=sys.stderr)
     spread_sheet = load_excel(filename)
     try:
         test_data = spread_sheet.sheet('TestData')
