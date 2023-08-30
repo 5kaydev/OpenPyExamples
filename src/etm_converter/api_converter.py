@@ -514,17 +514,20 @@ def parse_database_test(parsing_context: ParsingContext,
         if parsing_context.selector \
         else parsing_context.sheet.object_name1()
     query = params.get(PARAM_DB_QUERY, None)
-    validation = params.get(PARAM_DB_VALIDATION, 'MISSING Validation string')
-    if connection and query and validation:
+    validation = params.get(PARAM_DB_VALIDATION, None)
+    if connection and query:
         query = query.replace('\r\n', ' ').replace('\n', ' ').replace('\r', ' ')
-        try:
-            values = json.loads(validation)
-        except Exception as e:
-            print(f'ERROR: Exception while parsing validation for database test on row {row_index + 1}',
-                  file=sys.stderr)
-            print(e, file=sys.stderr)
-            print(validation, file=sys.stderr)
-            return None
+        if validation:
+            try:
+                values = json.loads(validation)
+            except Exception as e:
+                print(f'ERROR: Exception while parsing validation for database test on row {row_index + 1}',
+                      file=sys.stderr)
+                print(e, file=sys.stderr)
+                print(validation, file=sys.stderr)
+                return None
+        else:
+            values = []
         return model.DatabaseTest(connection, query, values)
     else:
         print(f'ERROR: Missing parameter for database test on row {row_index + 1}', file=sys.stderr)
