@@ -135,7 +135,7 @@ class APIScenario:
     def request_data(self) -> list[str]:
         data = []
         if self.request_type != 'get':
-            data.append(f'##KEY:{self.name}')
+            data.append(f'##KEY:##REQUEST:{self.name}')
             data.append(self.request)
         if self.variables:
             data.append(f'##KEY:##STORE:{self.name}')
