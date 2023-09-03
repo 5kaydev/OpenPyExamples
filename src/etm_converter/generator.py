@@ -16,14 +16,14 @@ class FeatureGenerator(abc.ABC):
 class DefaultFeatureGenerator(FeatureGenerator):
 
     def feature(self, feature_name: str) -> [str]:
-        return [f'Feature: {feature_name}']
+        return [f'Feature: {feature_name}', '']
 
 
 @dataclass(frozen=True)
 class SAPIFeatureGenerator(FeatureGenerator):
 
     def feature(self, feature_name: str) -> [str]:
-        return [f'Feature: {feature_name}', '', 'This is a SAPI feature file']
+        return [f'Feature: {feature_name}', '', 'This is a SAPI feature file', '']
 
 
 def feature_generator_factory(input_path: str, selector: str) -> FeatureGenerator:
@@ -49,7 +49,8 @@ def generate_feature(feature_name: str,
     :return: A tuple containing the feature and the Optional request file.
     """
     requests = []
-    sections = feature_generator.feature(feature_name)
+    feature_declaration = '\n'.join(feature_generator.feature(feature_name))
+    sections = []
     size = sum(source.size() for source in sources if isinstance(source, APITest))
     big_request = size > REQUESTS_MAX_SIZE
     scenario_number = 1
@@ -60,4 +61,4 @@ def generate_feature(feature_name: str,
             scenario_number = scenario_number + 1
         if big_request and isinstance(source, APITest):
             requests.extend(source.request_data())
-    return '\n\n'.join(sections), '\n'.join(requests) if big_request else None
+    return feature_declaration + '\n\n'.join(sections), '\n'.join(requests) if big_request else None
