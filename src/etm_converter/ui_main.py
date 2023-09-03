@@ -3,7 +3,7 @@ import os
 import sys
 
 from etm_converter import utils
-from etm_converter.generator import generate_feature
+from etm_converter.generator import feature_generator_factory, generate_feature
 from etm_converter.ui_converter import parse_file, parse_ui_objects
 
 
@@ -28,6 +28,7 @@ def ui_main():
         #    print(ui_objects_map)
         paths = utils.scan_dir(input_path, '*.xlsx')
         paths.sort()
+        feature_generator = feature_generator_factory(input_path, selector)
         for path in paths:
             if path.name != ui_objects_filename:
                 file_name = path.name[:-5]
@@ -39,7 +40,7 @@ def ui_main():
                 if sources is None or None in sources:
                     print('An error happened while parsing {0}'.format(path.name), file=sys.stderr)
                 else:
-                    feature, requests = generate_feature(file_name, sources)
+                    feature, requests = generate_feature(file_name, sources, feature_generator)
                     feature_file = os.path.join(output_path, file_name + '.feature')
                     utils.save_file(feature_file, feature)
                     request_file = os.path.join(output_path, file_name + '.req')

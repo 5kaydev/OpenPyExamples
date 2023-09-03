@@ -3,7 +3,7 @@ import os
 
 from etm_converter import utils
 from etm_converter.api_converter import parse_file
-from etm_converter.generator import generate_feature
+from etm_converter.generator import feature_generator_factory, generate_feature
 
 
 def api_main():
@@ -22,13 +22,14 @@ def api_main():
     os.makedirs(success_path, exist_ok=True)
     paths = utils.scan_dir(input_path, '*.xlsx')
     paths.sort()
+    feature_generator = feature_generator_factory(input_path, selector)
     for path in paths:
         input_filename = os.path.join(input_path, path.name)
         print(f'Parsing file {input_filename}')
         sources = parse_file(input_filename, selector)
         if sources is not None:
             file_name = path.name[:-5]
-            feature, requests = generate_feature(file_name, sources)
+            feature, requests = generate_feature(file_name, sources, feature_generator)
             utils.save_file(os.path.join(output_path, file_name + '.feature'), feature)
             request_file = os.path.join(output_path, file_name + '.req')
             if requests is None:
