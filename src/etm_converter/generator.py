@@ -13,11 +13,19 @@ class FeatureGenerator(abc.ABC):
     def feature(self, feature_name: str) -> [str]:
         pass
 
+    @abc.abstractmethod
+    def report(self) -> None:
+        pass
+
 
 class DefaultFeatureGenerator(FeatureGenerator):
 
     def feature(self, feature_name: str) -> [str]:
         return [f'Feature: {feature_name}', '']
+
+    def report(self) -> None:
+        # Nothing to report in default implementation
+        pass
 
 
 class SAPIFeatureGenerator(FeatureGenerator):
@@ -51,12 +59,18 @@ class SAPIFeatureGenerator(FeatureGenerator):
             result = []
             for tag in tags:
                 result.append('@' + tag)
+            result.sort()
             result.append(f'Feature: {feature_name}')
             result.append('')
             result.append(f'Generated from ETM Test Case Id {test_case_id}')
             result.append('')
             return result
         return [f'Feature: {feature_name}', '', 'ETM Test Case Id Unknown', '']
+
+    def report(self) -> None:
+        print('List of Test cases not found in the input', file=sys.stderr)
+        for test_case_id, name in self.unused_test_cases.items():
+            print(f'{test_case_id} - {name}', file=sys.stderr)
 
 
 def feature_generator_factory(input_path: str, selector: str) -> FeatureGenerator:
@@ -82,7 +96,7 @@ def generate_feature(feature_name: str,
     :return: A tuple containing the feature and the Optional request file.
     """
     requests = []
-    feature_declaration = '\n'.join(feature_generator.feature(feature_name))
+    feature_declaration = '\n'.join(feature_generator.feature(feature_name)) + '\n'
     sections = []
     size = sum(source.size() for source in sources if isinstance(source, APITest))
     big_request = size > REQUESTS_MAX_SIZE

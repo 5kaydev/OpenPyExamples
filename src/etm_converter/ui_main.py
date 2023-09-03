@@ -49,6 +49,7 @@ def ui_main():
                     else:
                         utils.save_file(request_file, requests)
                     utils.move_file(input_filename, os.path.join(success_path, path.name))
+        feature_generator.report()
 
 
 if __name__ == '__main__':
