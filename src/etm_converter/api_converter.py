@@ -417,16 +417,20 @@ def _transform_scenarios(parsing_context: ParsingContext, scenarios: [model.APIS
             url = f'[{parsing_context.selector.upper()}]{scenario.url}' if '[' not in scenario.url else scenario.url
             name = scenario.name[0:scenario.name.rfind('_')] + url[url.find('/'):]
             # Replacing double braced variables in variables
-            var_flag = False
-            variables = []
-            for expression, variable in scenario.variables:
-                var_tuple = None
-                for variable_name in variable_names:
-                    double_braced = '{' + variable_name + '}'
-                    if double_braced in variable:
-                        var_tuple = (expression, variable.replace(double_braced, variable_name))
-                        var_flag = True
-                variables.append((expression, variable) if var_tuple is None else var_tuple)
+            if scenario.variables:
+                var_flag = False
+                variables = []
+                for expression, variable in scenario.variables:
+                    var_tuple = None
+                    for variable_name in variable_names:
+                        double_braced = '{' + variable_name + '}'
+                        if double_braced in variable:
+                            var_tuple = (expression, variable.replace(double_braced, variable_name))
+                            var_flag = True
+                    variables.append((expression, variable) if var_tuple is None else var_tuple)
+                variables = tuple(variables) if var_flag else scenario.variables
+            else:
+                variables = scenario.variables
             new_scenarios.append(
                 model.APIScenario(name,
                                   scenario.outputs,
@@ -435,7 +439,7 @@ def _transform_scenarios(parsing_context: ParsingContext, scenarios: [model.APIS
                                   scenario.request_type,
                                   scenario.response_code,
                                   url,
-                                  tuple(variables) if var_flag else scenario.variables))
+                                  variables))
         return new_scenarios
     return scenarios
 
