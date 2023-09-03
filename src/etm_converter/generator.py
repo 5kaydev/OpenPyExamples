@@ -41,7 +41,7 @@ class SAPIFeatureGenerator(FeatureGenerator):
         except Exception as e:
             print('ERROR: Unable to parse Suite.json', file=sys.stderr)
             print(e, file=sys.stderr)
-            print(json, file=sys.stderr)
+            print(json_body, file=sys.stderr)
             raise e
         self.test_cases = {}
         self.unused_test_cases = {}
