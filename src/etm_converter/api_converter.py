@@ -415,7 +415,7 @@ def _transform_scenarios(parsing_context: ParsingContext, scenarios: [model.APIS
                     request = request.replace(double_braced, variable_name)
             # Default url app host to the parsing context
             url = f'[{parsing_context.selector.upper()}]{scenario.url}' if '[' not in scenario.url else scenario.url
-            name = scenario.name[0:scenario.name.rfind('_')] + url[url.find('/'):]
+            name = scenario.name[0:scenario.name.rfind('_')] + url[url.find('/'):].replace('/', '_')
             # Replacing double braced variables in variables
             if scenario.variables:
                 var_flag = False
