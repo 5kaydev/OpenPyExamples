@@ -16,6 +16,9 @@ class Sheet:
     def cell(self, row_index: int, column_index: int) -> str | None:
         return self.cells[row_index][column_index]
 
+    def set_cell(self, row_index: int, column_index: int, value: str | None):
+        self.cells[row_index][column_index] = value
+
 
 @dataclass(frozen=True)
 class SpreadSheet:
