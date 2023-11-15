@@ -37,7 +37,8 @@ def diff(spread_sheet1: SpreadSheet, spread_sheet2: SpreadSheet) -> None:
             continue
         if sheet1.rows != sheet2.rows or sheet1.columns != sheet2.columns:
             print(
-                f'Expected dimensions differ. Expected ({sheet1.rows},{sheet1.columns}) Actual ({sheet2.rows},{sheet2.columns})')
+                f'Expected dimensions differ. file1 ({sheet1.rows},{sheet1.columns}) file2 ({sheet2.rows},{sheet2.columns})')
+            return
         for row_index in range(0, sheet1.rows):
             row_result = f'row {row_index + 1} |'
             for column_index in range(0, sheet1.columns):
